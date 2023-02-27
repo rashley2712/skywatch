@@ -20,7 +20,6 @@ class sensor_bme280():
 		self.humidity = -999
 		self.pressure = -999
 		self.name = config['name']
-		print(config, flush=True)
 		try: 
 			self.monitorCadence = config['cadence']
 		except KeyError:

@@ -1,13 +1,17 @@
 #!/usr/bin/env python
-import signal, sys, argparse, time
-import config
+import signal, argparse, time, sys
+import config, camera
 
 def signal_handler(sig, frame):
 	print("Caught Ctrl-C")
 	print("Shutting down services...")
+	stopServices()
+	sys.exit()
+
+def stopServices():
 	for sensor in meteoSensors:
 		sensor.stopMonitor()
-	sys.exit()
+	camera.stopMonitor()
 
 	
 def information(message):
@@ -42,6 +46,7 @@ if __name__ == "__main__":
 	config = config.config(args.config, debug = False)
 	config.load()
 
+	# Initiliase the sensors
 	meteoSensors = []
 	for sensor in config.sensors:
 		if sensor['type']=="meteo":
@@ -52,13 +57,32 @@ if __name__ == "__main__":
 				meteoSensors.append(sensorObject)
 				information("Added sensor '%s' of type '%s'"%(sensor['name'], sensor['sensor']))
 	
+
+	# Create an ephemeris object
+	if hasattr(config, "ephemeris"):
+		print("Ephemeris: ", config.ephemeris)
+		ephem = camera.ephemeris(config.ephemeris)
+	
+	# Create a camera object
+	if hasattr(config, "camera"):
+		print(config.camera)
+		camera = camera.camera(config.camera)
+		camera.attachEphem(ephem)
+	
+
+
 	# Start the sensor monitors
 	for sensor in meteoSensors:
 		sensor.startMonitor()
 
+	# Start the camera
+	camera.startMonitor()
+
 	counter = 0
-	while True:
+	limit = 5
+	while counter<limit:
 		counter+=1
 		information("in loop cycle %d"%counter)
-		time.sleep(500)
+		time.sleep(50)
 	
+	stopServices()	

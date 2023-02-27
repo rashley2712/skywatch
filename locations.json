@@ -1,0 +1,28 @@
+{
+
+    "locations": [
+        {
+            "name": "roque",
+            "latitude": 28.7610049,
+            "longitude": -17.8812699,
+            "elevation": 2326
+        },
+        {
+            "name": "astrofarm",
+            "latitude": 28.784683,
+            "longitude": -17.9333598,
+            "elevation": 1160
+        },
+        {
+            "name": "sanjose",
+            "latitude": 28.6468866,
+            "longitude": -17.7742491,
+            "elevation": 281
+        },
+        {
+            "name": "madrid",
+            "latitude": 40.3730744,
+            "longitude": -3.5260134,
+            "elevation": 900
+        }]
+}
