@@ -78,3 +78,49 @@ class sensor_bme280():
 	def stopMonitor(self):
 		print("Stopping %s monitor. Will take up to %d seconds."%(self.name, self.monitorCadence), flush=True)
 		self.exit = True
+
+class cpuSensor():
+	def __init__(self, name = "cpu", config = {}):
+		self.cpuTempPath = "/sys/class/thermal/thermal_zone0/temp"
+		self.temperature = -999
+		self.name = name
+		self.attachedFan = None
+		self.fan = False
+		self.exit = False
+		try: 
+			self.monitorCadence = config['cadence']
+		except KeyError:
+			self.monitorCadence = 20
+		self.logData = { } 
+		
+
+	def attachFan(self, fan):
+		self.fan = True
+		self.attachedFan = fan
+		
+	def killMonitor(self):
+		print("stopping %s monitor."%self.name, flush=True)
+		self.exit = True
+
+	def readTemp(self):
+		try:
+			CPUtempFile = open(self.cpuTempPath, "rt")
+			for line in CPUtempFile:
+				self.temperature = float(line.strip())/1000
+				self.logData['temperature'] = self.temperature
+			CPUtempFile.close() 
+		except Exception as e:
+			print(str(e))	
+		return self.temperature
+		
+	def monitor(self):
+		while not self.exit:
+			self.readTemp()
+			print(self.name + "monitor: ", self.temperature, flush=True)
+			if self.fan: self.attachedFan.checkFan(self.temperature)
+			time.sleep(self.monitorCadence)
+		
+	def startMonitor(self):
+		self.monitorThread = threading.Thread(name='non-block', target=self.monitor)
+		self.monitorThread.start()
+	

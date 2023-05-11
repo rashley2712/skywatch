@@ -1,6 +1,12 @@
 #!/usr/bin/env python
-import signal, argparse, time, sys
-import config, camera
+
+# Standard Python libraries
+import signal, argparse, time, sys, logging
+import loggers
+from systemd import journal
+
+# Custom skyWATCH libraries
+import camera, config, ephemeris
 
 def signal_handler(sig, frame):
 	print("Caught Ctrl-C")
@@ -38,7 +44,13 @@ if __name__ == "__main__":
 	parser.add_argument('-s', '--service', action="store_true", default=False, help='Specify this option if running as a service.' )
 	args = parser.parse_args()
 
-	if args.service: service = True
+	if args.service: 
+		service = True
+		log = logging.getLogger('skywatch.service')
+		log.addHandler(journal.JournaldLogHandler())
+		log.setLevel(logging.INFO)
+		logLine = "Starting the skyWATCH system daemon."
+		log.info(logLine)
 	if args.config is None:
 		print("Please specify a config file.")
 		sys.exit()
@@ -56,33 +68,49 @@ if __name__ == "__main__":
 				sensorObject = meteosensors.sensor_bme280(config = sensor)
 				meteoSensors.append(sensorObject)
 				information("Added sensor '%s' of type '%s'"%(sensor['name'], sensor['sensor']))
+		if sensor['type']=="CPU":
+			cpuSensor = meteosensors.cpuSensor(config = sensor)
+			meteoSensors.append(cpuSensor)
+
+		time.sleep(1)
 	
 
 	# Create an ephemeris object
 	if hasattr(config, "ephemeris"):
 		print("Ephemeris: ", config.ephemeris)
-		ephem = camera.ephemeris(config.ephemeris)
+		ephem = ephemeris.ephemeris(config.ephemeris)
+		time.sleep(1)
 	
 	# Create a camera object
 	if hasattr(config, "camera"):
 		print(config.camera)
-		camera = camera.camera(config.camera)
+		camera = camera.camera(config.camera, config.installPath, args.config)
 		camera.attachEphem(ephem)
-	
+		time.sleep(1)
+
+	# Create the web uploader logger
+	meteouploader = loggers.meteoUploader(config = config.meteoUpload)
+	for sensor in meteoSensors:
+		meteouploader.attachSensor(sensor)
 
 
 	# Start the sensor monitors
 	for sensor in meteoSensors:
 		sensor.startMonitor()
+		time.sleep(1)
 
 	# Start the camera
 	camera.startMonitor()
 
+	# Start the meteo uploader
+	meteouploader.startMonitor()
+	
+
 	counter = 0
-	limit = 5
+	limit = 1E6
 	while counter<limit:
 		counter+=1
 		information("in loop cycle %d"%counter)
-		time.sleep(50)
+		time.sleep(500)
 	
 	stopServices()	

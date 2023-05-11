@@ -1,67 +1,9 @@
 #!/usr/bin/env python
-import signal, sys, argparse, time, datetime, threading, os, json
+import signal, sys, argparse, time, datetime, threading, os, json, subprocess
 import config
-import ephem
-	
-
-class ephemeris:
-	def __init__(self, config):
-		information("ephemeris location is %s"%config['location'])
-		self.location = self.getLocation(config['location'], config['locationFile'])
-		self.getSunMoon()
-
-	def getLocation(self, locationName, filename):
-		print("opening location data: ", filename)
-		locationFile = open(filename, 'rt')
-		locations = json.loads(locationFile.read())['locations']
-		locationFile.close()
-		for l in locations:
-			if l['name'] == locationName:
-				locationData = l
-				print(locationData)
-				return locationData
-		
-		print("Error: location %s not found in the locations config %s."%(locationName, filename))
-		return { "name" : "unknown" } 
-		
-
-	def getSunMoon(self): 
-		night = False
-		meteoLocation = ephem.Observer()
-		meteoLocation.lon = str(self.location['longitude'])
-		meteoLocation.lat = str(self.location['latitude'])
-		meteoLocation.elevation = self.location['elevation']
-		d = datetime.datetime.utcnow()
-		localTime = ephem.localtime(ephem.Date(d))
-		#information("local time: " + str(localTime))
-		information("universal time: " + str(d))
-		meteoLocation.date = ephem.Date(d)
-		sun = ephem.Sun(meteoLocation)
-		moon = ephem.Moon(meteoLocation)
-		# information("Sun azimuth: %s altitude: %s"%(sun.az, sun.alt))
-		altitude = sun.alt*180/3.14125
-		#information("Sun elevation is: %.2f"%altitude)
-		currentDate = ephem.Date(d)
-		timeToNewMoon = ephem.next_new_moon(currentDate) - currentDate
-		timeSinceLastNewMoon = currentDate - ephem.previous_new_moon(currentDate)
-		period = timeToNewMoon + timeSinceLastNewMoon
-		phase = timeSinceLastNewMoon / period
-		#information("Moon elevation is: %.2f and illumination is: %.2f"%(moon.alt*180/3.14125, moon.phase))
-		if altitude<-5: 
-			night = True
-			
-		results = {
-			"night" : night,
-			"sunElevation" : round(altitude,2),
-			"moonIllumination": round(moon.phase, 2), 
-			"moonElevation": round((moon.alt*180/3.14125), 2)
-		}
-		return results
-
-
 
 class camera:
-	def __init__(self, config):
+	def __init__(self, config, installPath, configFile):
 		from picamera2 import Picamera2
 		self.status = "init"
 		self.picam2 = Picamera2()
@@ -74,6 +16,8 @@ class camera:
 		self.name = config['name']
 		self.exit = False
 		self.status = "idle"
+		self.installPath = installPath
+		self.configFile = configFile
 
 	def attachEphem(self, ephemeris):
 		self.ephemeris = ephemeris
@@ -86,35 +30,53 @@ class camera:
 			filename = os.path.join(self.outputpath, timeString + ".jpg")
 		self.picam2.configure(self.camera_config)
 		self.status = "exposing"
+		information("sunMoon" + json.dumps(sunMoon))
+		if sunMoon['night']:
+			information("This is a night exposure.")
 		self.picam2.start()
-		self.picam2.annotate_text="test"
 		time.sleep(2)
 		self.picam2.capture_file(filename)
-		information("Camera captured file: %s"%filename)
 		self.logData['metadata'] = self.picam2.capture_metadata()
-		self.logData['mostrecent'] = filename
 		self.picam2.stop()
+		information("Camera captured file: %s"%filename)
+		self.logData['mostrecent'] = filename
 		self.status = "idle"
-	
+		
 	def writeMetadata(self):
 		import imagedata
 		imageData = imagedata.imagedata(debug=True)
 		imageData.setFilename(os.path.splitext(self.logData['mostrecent'])[0] + ".json")
 		imageData.setProperty("timestamp", self.logData['timestamp'])
 		imageData.setProperty("filename", self.logData['mostrecent'].split('/')[-1])
+		imageData.setProperty("ephemeris", self.logData['ephemeris'])
 		imageData.setProperty("camera", self.logData['metadata'])
 		
 		print("writing metadata to: %s"%imageData._filename)
 		imageData.save()
 	
+	def runPostProcessor(self, filename):
+		information("starting image post processing...(new thread)")			
+		processorCommand = [ os.path.join(self.installPath, "postprocess.py"), "-c" , self.configFile, "-f", filename ] 
+		commandLine =""
+		for s in processorCommand:
+			commandLine+= s + " "
+		information("calling: %s"%commandLine)
+		subprocess.Popen(processorCommand)
 		
 	def monitor(self):
 		while not self.exit:
+			startTime = datetime.datetime.now()
 			sunMoon = self.ephemeris.getSunMoon()
+			self.logData['ephemeris'] = sunMoon
 			information(sunMoon)
 			self.takeImage(sunMoon)
 			self.writeMetadata()
-			time.sleep(self.monitorCadence)
+			endTime = datetime.datetime.now()
+			elapsedTime = (endTime - startTime).total_seconds()
+			waitTime = self.monitorCadence - elapsedTime
+			self.runPostProcessor(self.logData['mostrecent'])
+			information("Time elapsed during camera operations %d seconds. Sleeping for %d seconds."%(elapsedTime, waitTime))
+			if waitTime>0: time.sleep(waitTime)
 		print("%s monitor stopped."%self.name)
 	
 		
