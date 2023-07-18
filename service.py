@@ -1,7 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Standard Python libraries
-import signal, argparse, time, sys, logging
+import signal, argparse, time, sys, logging, socket
 import loggers
 from systemd import journal
 
@@ -58,6 +58,12 @@ if __name__ == "__main__":
 	config = config.config(args.config, debug = False)
 	config.load()
 
+	config.identity = socket.gethostname()
+	print("Hostname: ", config.identity)
+
+	# 
+	monitors = []
+
 	# Initiliase the sensors
 	meteoSensors = []
 	for sensor in config.sensors:
@@ -87,24 +93,32 @@ if __name__ == "__main__":
 		camera = camera.camera(config.camera, config.installPath, args.config)
 		camera.attachEphem(ephem)
 		time.sleep(1)
+		# Start the camera
+		monitors.append(camera)
 
-	# Create the web uploader logger
-	meteouploader = loggers.meteoUploader(config = config.meteoUpload)
-	for sensor in meteoSensors:
-		meteouploader.attachSensor(sensor)
+	# Create the web uploader 
+	if hasattr(config, "meteoUploader"):
+		meteoUploader = loggers.webLogger(config.identity, config = config.meteoUploader)
+		for sensor in meteoSensors:
+			meteoUploader.attachSensor(sensor)
+		monitors.append(meteoUploader)
 
+	if hasattr(config, "meteoLogger"):
+		textLogger = loggers.textLogger(config.identity, config = config.meteoLogger)
+		for s in meteoSensors:
+			textLogger.attachSensor(s)
+		monitors.append(textLogger)
 
 	# Start the sensor monitors
 	for sensor in meteoSensors:
 		sensor.startMonitor()
 		time.sleep(1)
 
-	# Start the camera
-	camera.startMonitor()
+	time.sleep(5)
 
-	# Start the meteo uploader
-	meteouploader.startMonitor()
-	
+	# Start the other monitors
+	for m in monitors:
+		m.startMonitor()
 
 	counter = 0
 	limit = 1E6

@@ -123,4 +123,10 @@ class cpuSensor():
 	def startMonitor(self):
 		self.monitorThread = threading.Thread(name='non-block', target=self.monitor)
 		self.monitorThread.start()
+
+			
+	def stopMonitor(self):
+		print("Stopping %s monitor. Will take up to %d seconds."%(self.name, self.monitorCadence), flush=True)
+		self.exit = True
+
 	

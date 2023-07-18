@@ -133,5 +133,5 @@ if __name__ == "__main__":
 
 	print("Welcome to the camera driver....")
 
-	cameraInstance = camera()
+	cameraInstance = camera(config.camera, config.installPath, args.config)
 	cameraInstance.takeImage()
