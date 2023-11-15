@@ -24,11 +24,8 @@ class webLogger():
 		try: self.postURL = config['URL']
 		except KeyError: self.postURL = "https://localhost:8080/postmeteo"
 
-		try: self.queuePostURL = config['queuePostURL']
-		except KeyError: self.postURL = "https://localhost:8080/postqueuedmeteo"
-
 		try: self.logQueueFile = config['logQueueFile']
-		except KeyError: self.logQueueFile = "/var/log/meteo_queue.log"
+		except KeyError: self.logQueueFile = "/var/log/skywatch/queue.log"
 		
 		if local: self.postURL = config['localURL']
 
@@ -44,7 +41,7 @@ class webLogger():
 			
 			# Upload any queued readings
 			if os.path.exists(self.logQueueFile):
-				print("uploading some queued data to %s"%self.queuePostURL, flush=True)
+				print("uploading some queued data to %s"%self.postURL, flush=True)
 				queue = open(self.logQueueFile, 'rt')
 				jsonArray = []
 				for line in queue:
@@ -84,7 +81,7 @@ class webLogger():
 				print("Data not uploaded.")
 				return False
 			responseJSON = json.loads(response.text)
-			print("Response from db server:", responseJSON['status'], flush=True)
+			print("Response from skywatch server:", responseJSON['status'], flush=True)
 			if responseJSON['status'] == 'OK': success = True
 			response.close()
 		except Exception as e: 
