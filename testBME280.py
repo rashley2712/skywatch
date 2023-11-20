@@ -4,6 +4,7 @@ import datetime
 import time
 import board
 import busio
+import sys
 
 
 # Initialise the bme280
@@ -13,9 +14,10 @@ i2c = board.I2C()  # uses board.SCL and board.SDA
 decAddress = int(address, 16)
 try:
 	bme280 = adafruit_bme280.Adafruit_BME280_I2C(i2c, address = decAddress)
-except ValueError:
+except ValueError as e:
 	print("Sensor BME280 failed!", flush=True)
-	
+	print(e)
+	sys.exit()	
 
 
 while True:
