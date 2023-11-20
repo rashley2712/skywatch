@@ -106,7 +106,7 @@ class cpuSensor():
 		try:
 			CPUtempFile = open(self.cpuTempPath, "rt")
 			for line in CPUtempFile:
-				self.temperature = float(line.strip())/1000
+				self.temperature = round(float(line.strip())/1000, 1)
 				self.logData['temperature'] = self.temperature
 			CPUtempFile.close() 
 		except Exception as e:
@@ -116,7 +116,7 @@ class cpuSensor():
 	def monitor(self):
 		while not self.exit:
 			self.readTemp()
-			print(self.name + "monitor: ", self.temperature, flush=True)
+			print(self.name + " monitor:  %.1f\u00b0C"%self.temperature, flush=True)
 			if self.fan: self.attachedFan.checkFan(self.temperature)
 			time.sleep(self.monitorCadence)
 		

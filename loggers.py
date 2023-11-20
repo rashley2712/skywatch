@@ -36,6 +36,7 @@ class webLogger():
 
 	def monitor(self):
 		while not self.exit:
+			print("monitor loop self.exit:", self.exit)
 			timeStamp = datetime.datetime.now()
 			timeStampStr = timeStamp.strftime("%Y-%m-%d %H:%M:%S")
 			

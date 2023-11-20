@@ -28,8 +28,11 @@ class imagedata():
 		setattr(self, key, value)
 
 	def show(self):
+		print("<imagedata>")
 		for key in self._json.keys():
 			print(str(key) + ": " + str(self._json[key]))
+		print("</imagedata>")
+		
 
 	def getJSON(self):
 		return self._json

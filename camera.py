@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import signal, sys, argparse, time, datetime, threading, os, json, subprocess
-import config
+import config, ephemeris
 
 class camera:
 	def __init__(self, config, installPath, configFile):
@@ -64,20 +64,22 @@ class camera:
 		subprocess.Popen(processorCommand)
 		
 	def monitor(self):
-		while not self.exit:
-			startTime = datetime.datetime.now()
-			sunMoon = self.ephemeris.getSunMoon()
-			self.logData['ephemeris'] = sunMoon
-			information(sunMoon)
-			self.takeImage(sunMoon)
-			self.writeMetadata()
-			endTime = datetime.datetime.now()
-			elapsedTime = (endTime - startTime).total_seconds()
-			waitTime = self.monitorCadence - elapsedTime
-			self.runPostProcessor(self.logData['mostrecent'])
-			information("Time elapsed during camera operations %d seconds. Sleeping for %d seconds."%(elapsedTime, waitTime))
-			if waitTime>0: time.sleep(waitTime)
-		print("%s monitor stopped."%self.name)
+		startTime = datetime.datetime.now()
+		sunMoon = self.ephemeris.getSunMoon()
+		self.logData['ephemeris'] = sunMoon
+		information(sunMoon)
+		self.takeImage(sunMoon)
+		self.writeMetadata()
+		endTime = datetime.datetime.now()
+		elapsedTime = float((endTime - startTime).total_seconds())
+		waitTime = float(self.monitorCadence - elapsedTime)
+		self.runPostProcessor(self.logData['mostrecent'])
+		information("Time elapsed during camera operations %f seconds. Sleeping for %f seconds."%(elapsedTime, waitTime))
+		if waitTime>0: 
+			self.nextIteration = threading.Timer(waitTime, self.monitor)
+			self.nextIteration.start()
+		else: self.monitor()
+
 	
 		
 	def startMonitor(self):
@@ -85,7 +87,11 @@ class camera:
 		self.monitorThread.start()
 			
 	def stopMonitor(self):
-		print("Stopping %s monitor. Will take up to %d seconds."%(self.name, self.monitorCadence), flush=True)
+		print("Stopping %s monitor."%(self.name), flush=True)
+		try: 
+			self.nextIteration.cancel()
+		except AttributeError:
+			print("exiting...")
 		self.exit = True
 
 
@@ -134,4 +140,9 @@ if __name__ == "__main__":
 	print("Welcome to the camera driver....")
 
 	cameraInstance = camera(config.camera, config.installPath, args.config)
-	cameraInstance.takeImage()
+	ephem = ephemeris.ephemeris(config.ephemeris)
+	cameraInstance.attachEphem(ephem)
+	cameraInstance.stopMonitor()
+	cameraInstance.monitor()
+	time.sleep(10)
+	cameraInstance.stopMonitor()
