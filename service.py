@@ -92,6 +92,7 @@ if __name__ == "__main__":
 		print(config.camera)
 		camera = camera.camera(config.camera, config.installPath, args.config)
 		camera.attachEphem(ephem)
+		camera.setHostname(config.identity)
 		time.sleep(1)
 		# Start the camera
 		monitors.append(camera)

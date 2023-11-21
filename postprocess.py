@@ -69,7 +69,7 @@ def uploadToServer(imageFilename, URL):
 	headers = { 'Content-type': 'image/jpeg'}
 	try:
 		response = requests.post(destinationURL, files=files)
-		information("SkyWATCH server's response code: " + str(response.status_code))
+		information("skyWATCH server's response code: " + str(response.status_code))
 		response.close()
 	except Exception as e: 
 		information("error: " + repr(e))
@@ -85,8 +85,8 @@ def renderText(image, imageData):
 	from PIL import ImageFont
 	from PIL import ImageDraw 
 
-	text = "%s | sun: %s | moon: %s (%s%%)"%(imageData.date, imageData.sun['elevation'], imageData.moon['elevation'], imageData.moon['illumination'])
-	print("Annotation:", text)
+	text = "%s | sun: %s | moon: %s (%s%%)"%(imageData.timestamp, imageData.ephemeris['sunElevation'], imageData.ephemeris['moonElevation'], imageData.ephemeris['moonIllumination'])
+	print("Adding annotation:", text)
 	draw = ImageDraw.Draw(image)
 	size = image.size
 	if size[0]>3000: fontSize = 54
@@ -116,20 +116,20 @@ if __name__ == "__main__":
 	debug = args.debug
 	config = config.config(filename=args.config)
 	config.load()
-	print(config.getProperties())
+	debugOut(config.getProperties())
 
 	if args.filename == "latest":
 		# Generate the list of files in the specified folder
 		cameraPath = config.camera['outputpath']
 		debugOut("Looking for the most recent file in %s"%cameraPath)
 		import glob
-		#listing = glob.glob(cameraPath + "/*.(jpg|png)")
-		listing = glob.glob(cameraPath + "/*")
+		types = [ 'jpg', 'png' ]
 		fileCollection = []
-		for f in listing:
-			fdict = { "filename": os.path.join(cameraPath, f), "timestamp": os.path.getmtime(os.path.join(cameraPath, f))}
-			print(fdict)
-			fileCollection.append(fdict)
+		for t in types:
+			listing = glob.glob(cameraPath + "/*." + t)
+			for f in listing:
+				fdict = { "filename": os.path.join(cameraPath, f), "timestamp": os.path.getmtime(os.path.join(cameraPath, f))}
+				fileCollection.append(fdict)
 
 		fileCollection.sort(key=lambda item: item['timestamp'])
 		imageFile = fileCollection[-1]
@@ -137,7 +137,7 @@ if __name__ == "__main__":
 	else:
 		imageFile = { "filename": args.filename } 
 
-	imageData = imagedata.imagedata()
+	imageData = imagedata.imagedata(debug = debug)
 	imageData.setFilename(os.path.splitext(imageFile['filename'])[0] + ".json")
 	imageData.load()
 	imageData.show()
@@ -147,15 +147,31 @@ if __name__ == "__main__":
 		print("Rendering a preview to the X-session ... will take about 30s")
 		image.show()
 
-	if imageData.encoding == "jpg":
-		exif_data = image._getexif()
-		index = str(exif_data).find("exp=")
-		end = str(exif_data).find(' ', index)
-		if debug: showTags(exif_data)
-		expTime = float(str(exif_data)[index+4: end+1])/1E6
-		if expTime==-1: 
-			#imageData.setProperty("exposure", expTime)
-			debugOut("EXIF: expTime: %.4f"%expTime)	
+	try: 
+		encoding = imageData.encoding
+	except AttributeError:
+		if (os.path.splitext(imageData.filename)[1] == ".jpg") or (os.path.splitext(imageData.filename)[1] == ".jpeg"): 
+			imageData.setProperty("encoding", "jpg")
+			encoding="jpg"
+	
+	try: 
+		expTime = float(imageData.camera['ExposureTime'])/1E6
+	except AttributeError:
+		expTime = -1
+		print("JSON does not contain the exposure time.")
+
+		if encoding == "jpg":
+			exif_data = image._getexif()
+			index = str(exif_data).find("exp=")
+			end = str(exif_data).find(' ', index)
+			if debug: showTags(exif_data)
+			if expTime==-1: 
+				expTime = float(str(exif_data)[index+4: end+1])/1E6
+				#imageData.setProperty("exposure", expTime)
+				debugOut("EXIF: expTime: %.4f"%expTime)	
+	
+	imageData.setProperty("exposure", expTime)
+	
 	size = image.size
 	imageData.setProperty("width", size[0])
 	imageData.setProperty("height", size[1])
@@ -170,9 +186,9 @@ if __name__ == "__main__":
 	imageData.save()		
 
 	# Save a copy of the non-annotated image
-	notextDir = "/home/pi/share/no-text/"
+	notextDir = "/home/skywatch/camera/no-text/"
 	notextFile = notextDir + os.path.split(imageFile['filename'])[1]
-	print("Will save an un-annotated image to:", notextFile)
+	debugOut("Will save an un-annotated image to: %s"%notextFile)
 	image.save(notextFile)
 
 	# Render the annotations onto the image
@@ -261,10 +277,15 @@ if __name__ == "__main__":
 
 	information("Image size is: %s"%str(image.size))
 	# If upload is set... upload to skyWATCH server
-	URL = config.camerauploadURL
+	URL = config.camera['cameraUploadURL']
+	try: 
+		if config.camera['local'] == "true":
+			URL = config.camera['localURL']
+	except AttributeError:
+		URL = "http://localhost:8080/pictureupload"
 	if not args.test: 
 		uploadToServer(imageFile['filename'], URL)	
-		uploadMetadata(imageData.getJSON(), config.imagedataURL)
+		#uploadMetadata(imageData.getJSON(), config.imagedataURL)
 	
 
 	

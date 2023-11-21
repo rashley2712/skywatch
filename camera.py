@@ -1,6 +1,7 @@
 #!/usr/bin/env python
-import signal, sys, argparse, time, datetime, threading, os, json, subprocess
+import signal, sys, argparse, time, datetime, threading, os, json, subprocess, socket
 import config, ephemeris
+import pprint
 
 class camera:
 	def __init__(self, config, installPath, configFile):
@@ -9,6 +10,8 @@ class camera:
 		self.picam2 = Picamera2()
 		self.width = int(config['width'])
 		self.height = int(config['height'])
+		self.width = 4608
+		self.height = 2592
 		self.camera_config = self.picam2.create_still_configuration(main={"size": ( self.width, self.height)}, lores={"size": (640, 480)}, display="lores")
 		self.logData = {}
 		self.monitorCadence = config['cadence']
@@ -18,6 +21,10 @@ class camera:
 		self.status = "idle"
 		self.installPath = installPath
 		self.configFile = configFile
+		self.hostname = "unknown"
+
+	def setHostname(self, hostname):
+		self.hostname = hostname
 
 	def attachEphem(self, ephemeris):
 		self.ephemeris = ephemeris
@@ -27,12 +34,19 @@ class camera:
 		timeString = now.strftime("%Y%m%d_%H%M%S")
 		self.logData['timestamp'] = timeString
 		if filename=="default":
-			filename = os.path.join(self.outputpath, timeString + ".jpg")
+			filename = os.path.join(self.outputpath, "%s_%s.jpg"%(self.hostname, timeString))
+		self.camera_config	
 		self.picam2.configure(self.camera_config)
 		self.status = "exposing"
-		information("sunMoon" + json.dumps(sunMoon))
+		information("sunMoon: " + json.dumps(sunMoon))
 		if sunMoon['night']:
 			information("This is a night exposure.")
+			self.mode = "night"
+			#self.picam2.set_controls({"ExposureTime": 400000, "AnalogueGain": 1.0})
+			print("Setting exposure time....")
+			self.picam2.controls.ExposureTime = 100000
+			pprint.pprint(self.picam2.sensor_modes)
+		else: self.mode = "day"
 		self.picam2.start()
 		time.sleep(2)
 		self.picam2.capture_file(filename)
@@ -50,6 +64,7 @@ class camera:
 		imageData.setProperty("filename", self.logData['mostrecent'].split('/')[-1])
 		imageData.setProperty("ephemeris", self.logData['ephemeris'])
 		imageData.setProperty("camera", self.logData['metadata'])
+		imageData.setProperty("mode", self.mode)
 		
 		print("writing metadata to: %s"%imageData._filename)
 		imageData.save()
@@ -102,6 +117,7 @@ class camera:
 def signal_handler(sig, frame):
 	print("Caught Ctrl-C")
 	print("Shutting down services...")
+	cameraInstance.stopMonitor()
 	sys.exit()
 
 	
@@ -129,6 +145,8 @@ if __name__ == "__main__":
 	parser.add_argument('-s', '--service', action="store_true", default=False, help='Specify this option if running as a service.' )
 	args = parser.parse_args()
 
+
+
 	if args.service: service = True
 	if args.config is None:
 		print("Please specify a config file.")
@@ -136,12 +154,15 @@ if __name__ == "__main__":
 
 	config = config.config(args.config, debug = False)
 	config.load()
+	config.identity = socket.gethostname()
+	print("Hostname: ", config.identity)
 
 	print("Welcome to the camera driver....")
 
 	cameraInstance = camera(config.camera, config.installPath, args.config)
 	ephem = ephemeris.ephemeris(config.ephemeris)
 	cameraInstance.attachEphem(ephem)
+	cameraInstance.setHostname(config.identity)
 	cameraInstance.stopMonitor()
 	cameraInstance.monitor()
 	time.sleep(10)

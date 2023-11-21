@@ -15,26 +15,26 @@ class ephemeris:
 		
 		night = False
 		meteoLocation = ephem.Observer()
-		print("location info:", self.locationInfo)
+		#print("location info:", self.locationInfo)
 		meteoLocation.lon = str(self.locationInfo['longitude'])
 		meteoLocation.lat = str(self.locationInfo['latitude'])
 		meteoLocation.elevation = self.locationInfo['elevation']
 		d = datetime.datetime.utcnow()
 		localTime = ephem.localtime(ephem.Date(d))
-		print("local time: " + str(localTime))
-		print("universal time: " + str(d))
+		#print("local time: " + str(localTime))
+		#print("universal time: " + str(d))
 		meteoLocation.date = ephem.Date(d)
 		sun = ephem.Sun(meteoLocation)
 		moon = ephem.Moon(meteoLocation)
 		# information("Sun azimuth: %s altitude: %s"%(sun.az, sun.alt))
 		altitude = round(sun.alt*180/3.14125, 2)
-		print("Sun elevation is: %.2f"%altitude)
+		#print("Sun elevation is: %.2f"%altitude)
 		currentDate = ephem.Date(d)
 		timeToNewMoon = ephem.next_new_moon(currentDate) - currentDate
 		timeSinceLastNewMoon = currentDate - ephem.previous_new_moon(currentDate)
 		period = timeToNewMoon + timeSinceLastNewMoon
 		phase = timeSinceLastNewMoon / period
-		print("Moon elevation is: %.2f and illumination is: %.2f"%(moon.alt*180/3.14125, moon.phase))
+		#print("Moon elevation is: %.2f and illumination is: %.2f"%(moon.alt*180/3.14125, moon.phase))
 		if altitude<-5: 
 			# information("will take night exposure...")
 			night = True
