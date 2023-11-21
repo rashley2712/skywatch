@@ -239,7 +239,7 @@ if __name__ == "__main__":
 		# Never go over 100 seconds
 		if newExpTime > 100: newExpTime = 100
 
-		config.camera['night']['expTime'] = newExpTime
+		#config.camera['night']['expTime'] = newExpTime
 		config.save()
 		
 
