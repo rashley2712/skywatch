@@ -3,6 +3,28 @@ import signal, sys, argparse, time, datetime, threading, os, json, subprocess, s
 import config, ephemeris
 import pprint
 
+
+def debugOut(message):
+	if debug: print("DEBUG: %s"%message, flush=True)
+
+
+def getMostRecentExposureTime():
+	# Generate the list of files in the specified folder
+	cameraPath = config.camera['outputpath']
+	debugOut("Looking for the most recent file in %s"%cameraPath)
+	import glob
+	types = [ 'json' ]
+	fileCollection = []
+	for t in types:
+		listing = glob.glob(cameraPath + "/*." + t)
+		for f in listing:
+			fdict = { "filename": os.path.join(cameraPath, f), "timestamp": os.path.getmtime(os.path.join(cameraPath, f))}
+			fileCollection.append(fdict)
+
+	fileCollection.sort(key=lambda item: item['timestamp'])
+	imageFile = fileCollection[-1]
+	debugOut("Most recent: %s"%imageFile)
+
 class camera:
 	def __init__(self, config, installPath, configFile):
 		from picamera2 import Picamera2
@@ -39,19 +61,24 @@ class camera:
 		self.picam2.configure(self.camera_config)
 		self.status = "exposing"
 		information("sunMoon: " + json.dumps(sunMoon))
+		#sunMoon['night'] = True
+		self.picam2.still_configuration.enable_raw()
+		self.picam2.start("preview", show_preview=False)
 		if sunMoon['night']:
 			information("This is a night exposure.")
 			self.mode = "night"
-			#self.picam2.set_controls({"ExposureTime": 400000, "AnalogueGain": 1.0})
-			print("Setting exposure time....")
-			self.picam2.controls.ExposureTime = 100000
-			pprint.pprint(self.picam2.sensor_modes)
-		else: self.mode = "day"
-		self.picam2.start()
-		time.sleep(2)
-		self.picam2.capture_file(filename)
+			config.load()
+			texp = config.camera['suggestedTexp']
+			print("suggested exposure time: %s seconds"%texp)
+			self.picam2.still_configuration.controls.ExposureTime = int( texp * 1E6 )
+			time.sleep(1)
+		else: 
+			self.mode = "day"
+		
+		self.picam2.switch_mode_and_capture_file("still", filename)
+		
 		self.logData['metadata'] = self.picam2.capture_metadata()
-		self.picam2.stop()
+		self.picam2.close()
 		information("Camera captured file: %s"%filename)
 		self.logData['mostrecent'] = filename
 		self.status = "idle"
@@ -145,7 +172,7 @@ if __name__ == "__main__":
 	parser.add_argument('-s', '--service', action="store_true", default=False, help='Specify this option if running as a service.' )
 	args = parser.parse_args()
 
-
+	debug = args.debug
 
 	if args.service: service = True
 	if args.config is None:
@@ -163,7 +190,6 @@ if __name__ == "__main__":
 	ephem = ephemeris.ephemeris(config.ephemeris)
 	cameraInstance.attachEphem(ephem)
 	cameraInstance.setHostname(config.identity)
-	cameraInstance.stopMonitor()
 	cameraInstance.monitor()
-	time.sleep(10)
+	time.sleep(5)
 	cameraInstance.stopMonitor()
