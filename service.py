@@ -89,8 +89,8 @@ if __name__ == "__main__":
 	
 	# Create a camera object
 	if hasattr(config, "camera"):
-		print(config.camera)
-		camera = camera.camera(config.camera, config.installPath, args.config)
+		#print(config.camera)
+		camera = camera.camera(config, config.installPath, args.config)
 		camera.attachEphem(ephem)
 		camera.setHostname(config.identity)
 		time.sleep(1)

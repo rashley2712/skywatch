@@ -12,7 +12,6 @@ class ephemeris:
 
 	
 	def getSunMoon(self): 
-		
 		night = False
 		meteoLocation = ephem.Observer()
 		#print("location info:", self.locationInfo)
@@ -36,12 +35,11 @@ class ephemeris:
 		phase = timeSinceLastNewMoon / period
 		#print("Moon elevation is: %.2f and illumination is: %.2f"%(moon.alt*180/3.14125, moon.phase))
 		if altitude<-5: 
-			# information("will take night exposure...")
 			night = True
 			
 		results = {
 			"night" : night,
-			"sunElevation" : altitude,
+			"sunElevation" : round(altitude, 2),
 			"moonIllumination": round(moon.phase, 2), 
 			"moonElevation": round((moon.alt*180/3.14125), 2)
 		}

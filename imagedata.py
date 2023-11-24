@@ -43,4 +43,4 @@ class imagedata():
 			setattr(self, key, self._json[key])
 
 	def debugOut(self, message):
-	    if self._debug: print(message, flush=True)
+	    if self._debug: print("class imagedata: %s"%message, flush=True)

@@ -2,6 +2,7 @@
 import signal, sys, argparse, time, datetime, threading, os, json, subprocess, socket
 import config, ephemeris
 import pprint
+from picamera2 import Picamera2
 
 
 def debugOut(message):
@@ -27,23 +28,21 @@ def getMostRecentExposureTime():
 
 class camera:
 	def __init__(self, config, installPath, configFile):
-		from picamera2 import Picamera2
 		self.status = "init"
-		self.picam2 = Picamera2()
-		self.width = int(config['width'])
-		self.height = int(config['height'])
+		self.width = int(config.camera['width'])
+		self.height = int(config.camera['height'])
 		self.width = 4608
 		self.height = 2592
-		self.camera_config = self.picam2.create_still_configuration(main={"size": ( self.width, self.height)}, lores={"size": (640, 480)}, display="lores")
 		self.logData = {}
-		self.monitorCadence = config['cadence']
-		self.outputpath = config['outputpath']
-		self.name = config['name']
+		self.monitorCadence = config.camera['cadence']
+		self.outputpath = config.camera['outputpath']
+		self.name = config.camera['name']
 		self.exit = False
 		self.status = "idle"
 		self.installPath = installPath
 		self.configFile = configFile
 		self.hostname = "unknown"
+		self.config = config
 
 	def setHostname(self, hostname):
 		self.hostname = hostname
@@ -52,13 +51,15 @@ class camera:
 		self.ephemeris = ephemeris
 
 	def takeImage(self, sunMoon, filename="default"):
+		self.picam2 = Picamera2()
+		self.camera_config = self.picam2.create_still_configuration(main={"size": ( self.width, self.height)}, lores={"size": (640, 480)}, display="lores")
+		self.picam2.configure(self.camera_config)
+		
 		now = datetime.datetime.now()
 		timeString = now.strftime("%Y%m%d_%H%M%S")
 		self.logData['timestamp'] = timeString
 		if filename=="default":
 			filename = os.path.join(self.outputpath, "%s_%s.jpg"%(self.hostname, timeString))
-		self.camera_config	
-		self.picam2.configure(self.camera_config)
 		self.status = "exposing"
 		information("sunMoon: " + json.dumps(sunMoon))
 		#sunMoon['night'] = True
@@ -67,17 +68,19 @@ class camera:
 		if sunMoon['night']:
 			information("This is a night exposure.")
 			self.mode = "night"
-			config.load()
-			texp = config.camera['suggestedTexp']
+			self.config.load()
+			texp = self.config.camera['suggestedTexp']
 			print("suggested exposure time: %s seconds"%texp)
 			self.picam2.still_configuration.controls.ExposureTime = int( texp * 1E6 )
 			time.sleep(1)
+			self.logData['exposure'] = texp
 		else: 
 			self.mode = "day"
+			self.logData['exposure'] = -1
 		
 		self.picam2.switch_mode_and_capture_file("still", filename)
 		
-		self.logData['metadata'] = self.picam2.capture_metadata()
+		self.logData['metadata'] = self.picam2.capture_metadata("still")
 		self.picam2.close()
 		information("Camera captured file: %s"%filename)
 		self.logData['mostrecent'] = filename
@@ -91,20 +94,28 @@ class camera:
 		imageData.setProperty("filename", self.logData['mostrecent'].split('/')[-1])
 		imageData.setProperty("ephemeris", self.logData['ephemeris'])
 		imageData.setProperty("camera", self.logData['metadata'])
+		imageData.setProperty("exposure", self.logData['exposure'])
 		imageData.setProperty("mode", self.mode)
 		
 		print("writing metadata to: %s"%imageData._filename)
 		imageData.save()
 	
 	def runPostProcessor(self, filename):
-		information("starting image post processing...(new thread)")			
+		information("starting image post processing...")			
 		processorCommand = [ os.path.join(self.installPath, "postprocess.py"), "-c" , self.configFile, "-f", filename ] 
 		commandLine =""
 		for s in processorCommand:
 			commandLine+= s + " "
 		information("calling: %s"%commandLine)
-		subprocess.Popen(processorCommand)
-		
+		returnValue = subprocess.Popen(processorCommand)
+		output = subprocess.Popen(processorCommand, stdout=subprocess.PIPE).communicate()[0]
+		if "retake requested" in str(output):
+			print("the camera has been asked for another exposure")
+			time.sleep(1)
+			self.nextIteration.cancel()
+			self.nextIteration = threading.Timer(2, self.monitor)
+			self.nextIteration.start()
+
 	def monitor(self):
 		startTime = datetime.datetime.now()
 		sunMoon = self.ephemeris.getSunMoon()
@@ -115,13 +126,13 @@ class camera:
 		endTime = datetime.datetime.now()
 		elapsedTime = float((endTime - startTime).total_seconds())
 		waitTime = float(self.monitorCadence - elapsedTime)
-		self.runPostProcessor(self.logData['mostrecent'])
 		information("Time elapsed during camera operations %f seconds. Sleeping for %f seconds."%(elapsedTime, waitTime))
 		if waitTime>0: 
 			self.nextIteration = threading.Timer(waitTime, self.monitor)
 			self.nextIteration.start()
 		else: self.monitor()
-
+		self.runPostProcessor(self.logData['mostrecent'])
+		
 	
 		
 	def startMonitor(self):
@@ -186,7 +197,7 @@ if __name__ == "__main__":
 
 	print("Welcome to the camera driver....")
 
-	cameraInstance = camera(config.camera, config.installPath, args.config)
+	cameraInstance = camera(config, config.installPath, args.config)
 	ephem = ephemeris.ephemeris(config.ephemeris)
 	cameraInstance.attachEphem(ephem)
 	cameraInstance.setHostname(config.identity)

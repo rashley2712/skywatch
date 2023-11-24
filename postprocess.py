@@ -6,8 +6,9 @@ import numpy
 import subprocess
 import os
 import config, imagedata
-from PIL import Image
-from PIL.ExifTags import TAGS
+import sys
+import PIL.Image
+import PIL.ExifTags
 
 def plotHistoRGB(histogram):
 	import matplotlib.pyplot
@@ -98,10 +99,6 @@ def renderText(image, imageData):
 
 	return image
 
-
-def showTags(tags):
-	for key in tags.keys():
-		print(TAGS[key], tags[key])
 	
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='Performs post processing of the skycam images.')
@@ -117,6 +114,7 @@ if __name__ == "__main__":
 	config = config.config(filename=args.config)
 	config.load()
 	debugOut(config.getProperties())
+	retakeNow = False
 
 	if args.filename == "latest":
 		# Generate the list of files in the specified folder
@@ -137,12 +135,12 @@ if __name__ == "__main__":
 	else:
 		imageFile = { "filename": args.filename } 
 
-	imageData = imagedata.imagedata(debug = debug)
+	imageData = imagedata.imagedata(debug = False)
 	imageData.setFilename(os.path.splitext(imageFile['filename'])[0] + ".json")
 	imageData.load()
 	imageData.show()
 	
-	image = Image.open(imageFile["filename"])
+	image = PIL.Image.open(imageFile["filename"])
 	if args.display: 
 		print("Rendering a preview to the X-session ... will take about 30s")
 		image.show()
@@ -153,23 +151,32 @@ if __name__ == "__main__":
 		if (os.path.splitext(imageData.filename)[1] == ".jpg") or (os.path.splitext(imageData.filename)[1] == ".jpeg"): 
 			imageData.setProperty("encoding", "jpg")
 			encoding="jpg"
-	
+		if (os.path.splitext(imageData.filename)[1] == ".png"): 
+			imageData.setProperty("encoding", "png")
+			encoding="png"
+
 	try: 
-		expTime = float(imageData.camera['ExposureTime'])/1E6
+		expTime = float(imageData.exposure)
 	except AttributeError:
 		expTime = -1
 		print("JSON does not contain the exposure time.")
 
-		if encoding == "jpg":
-			exif_data = image._getexif()
-			index = str(exif_data).find("exp=")
-			end = str(exif_data).find(' ', index)
-			if debug: showTags(exif_data)
-			if expTime==-1: 
-				expTime = float(str(exif_data)[index+4: end+1])/1E6
-				#imageData.setProperty("exposure", expTime)
-				debugOut("EXIF: expTime: %.4f"%expTime)	
-	
+	def showTags(tags):
+		for key in tags.keys():
+			print(PIL.ExifTags.TAGS[key], tags[key])
+
+	def getExposure(exif):
+		for key in exif.keys():
+			if PIL.ExifTags.TAGS[key] == "ExposureTime": return float(exif[key])
+
+	if expTime==-1 and encoding == "jpg":
+		exif_data = image._getexif()
+		if exif_data is not None:
+			print(str(exif_data))
+			showTags(exif_data)
+			expTime = getExposure(exif_data)
+			debugOut("EXIF: expTime: %.4f"%expTime)	
+		
 	imageData.setProperty("exposure", expTime)
 	
 	size = image.size
@@ -178,8 +185,7 @@ if __name__ == "__main__":
 	debugOut("size: %s"%str(size))
 	(width, height) = size
 	
-	expTime = imageData.exposure
-	debugOut("Exposure time from JSON is %.4f seconds"%(expTime))
+	debugOut("Exposure time is %.4f seconds"%(expTime))
 	if imageData.mode=="night":
 		imageData.setProperty("exposure", round(expTime, 2))
 	debugOut("Bands: %s"%str(image.getbands()))
@@ -197,11 +203,11 @@ if __name__ == "__main__":
 	image.save(imageFile['filename'])
 
 	if imageData.mode == "night":
-		# Choose the central 25% of the image
-		left = int( width/2 - width/4)
-		right = int( width/2 + width/4)
-		upper = int( height/2 - height/4)
-		lower = int( height/2 + height/4)
+		# Choose the central 12% of the image
+		left = int( width/2 - width/8)
+		right = int( width/2 + width/8)
+		upper = int( height/2 - height/8)
+		lower = int( height/2 + height/8)
 		
 		histogram = getHistoRGB(image)
 		if args.display: plotHistoRGB(histogram)
@@ -222,6 +228,7 @@ if __name__ == "__main__":
 		if median > 240: 
 			newExpTime = expTime * 0.50
 			information("image is quite saturated, suggesting exposure goes from %.4f to %.4f seconds."%(expTime, newExpTime))
+			retakeNow = True
 		elif median>200:
 			newExpTime = expTime * 0.75
 			information("image is little bit saturated, suggesting exposure goes from %.4f to %.4f seconds."%(expTime, newExpTime))
@@ -230,17 +237,21 @@ if __name__ == "__main__":
 			information("image is little bit saturated, suggesting exposure goes from %.4f to %.4f seconds."%(expTime, newExpTime))
 
 		if median <60: 
-			newExpTime = expTime * 2.0
+			newExpTime = expTime * 2.5
 			information("image is a quite under-exposed, suggesting exposure goes from %.4f to %.4f seconds."%(expTime, newExpTime))
+			retakeNow = True
 		elif median <112: 
 			newExpTime = expTime * 1.25
 			information("image is a little under-exposed, suggesting exposure goes from %.4f to %.4f seconds."%(expTime, newExpTime))
 		
-		# Never go over 100 seconds
-		if newExpTime > 100: newExpTime = 100
-
-		#config.camera['night']['expTime'] = newExpTime
+	
+		config.camera['suggestedTexp'] = newExpTime
 		config.save()
+		# Never go over 100 seconds
+		if newExpTime > 100: 
+			newExpTime = 100
+			retakeNow = False
+
 		
 
 	lowBandwidth = False
@@ -275,17 +286,25 @@ if __name__ == "__main__":
 			imageData.save()
 		
 
-	information("Image size is: %s"%str(image.size))
+	sizeinBytes = os.path.getsize(imageFile['filename'])
+	information("Image size is: %s %.2f Mb"%(str(image.size), sizeinBytes/1024))
 	# If upload is set... upload to skyWATCH server
-	URL = config.camera['cameraUploadURL']
-	try: 
-		if config.camera['local'] == "true":
-			URL = config.camera['localURL']
-	except AttributeError:
-		URL = "http://localhost:8080/pictureupload"
+	# args.test = True
 	if not args.test: 
-		uploadToServer(imageFile['filename'], URL)	
 		#uploadMetadata(imageData.getJSON(), config.imagedataURL)
+		URL = config.camera['cameraUploadURL']
+		try: 
+			if config.camera['local'] == "true":
+				URL = config.camera['localURL']
+		except AttributeError:
+			URL = "http://localhost:8080/pictureupload"
+		uploadToServer(imageFile['filename'], URL)	
+		
+	if retakeNow:
+		print("retake requested", flush=True)
+		sys.exit(1)
+	else:
+		sys.exit(0)
 	
 
 	
