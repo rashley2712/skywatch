@@ -299,6 +299,30 @@ if __name__ == "__main__":
 		except AttributeError:
 			URL = "http://localhost:8080/pictureupload"
 		uploadToServer(imageFile['filename'], URL)	
+
+		# also upload the image meta data to the BigQuery table
+		metaURL = URL[0:URL.rfind("/")] + "/imagedata"
+		print("Uploading image meta data to %s"%metaURL)
+		tmstp = imageData._json['timestamp']
+		reformattedTimestamp = "%s-%s-%s %s:%s:%s"%(tmstp[0:4], tmstp[4:6], tmstp[6:8], tmstp[9:11], tmstp[11:13], tmstp[13:15])
+		import socket
+		hostname = socket.gethostname()
+		postData = { "timestamp" : reformattedTimestamp, "hostname" : hostname, "filename" : imageData._json['filename']}
+		postData['json'] = imageData._json
+		success = False
+		try: 
+			response = requests.post(metaURL, json=postData)
+			print("Server status code: ", response.status_code, flush=True)
+			if (response.status_code!=200): 
+				print("Data not uploaded.")
+				success = False
+			responseJSON = json.loads(response.text)
+			print("Response from skywatch server:", responseJSON['status'], flush=True)
+			if responseJSON['status'] == 'OK': success = True
+			response.close()
+		except Exception as e: 
+			success = False
+			print(e, flush=True)
 		
 	if retakeNow:
 		print("retake requested", flush=True)
