@@ -244,14 +244,14 @@ if __name__ == "__main__":
 			newExpTime = expTime * 1.25
 			information("image is a little under-exposed, suggesting exposure goes from %.4f to %.4f seconds."%(expTime, newExpTime))
 		
-	
-		config.camera['suggestedTexp'] = newExpTime
-		config.save()
 		# Never go over 100 seconds
 		if newExpTime > 100: 
 			newExpTime = 100
 			retakeNow = False
 
+		config.camera['suggestedTexp'] = round(newExpTime,4)
+		config.save()
+		
 		
 
 	lowBandwidth = False

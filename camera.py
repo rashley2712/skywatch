@@ -107,8 +107,8 @@ class camera:
 		for s in processorCommand:
 			commandLine+= s + " "
 		information("calling: %s"%commandLine)
-		returnValue = subprocess.Popen(processorCommand)
 		output = subprocess.Popen(processorCommand, stdout=subprocess.PIPE).communicate()[0]
+		print(output.decode("utf-8"), flush=True)
 		if "retake requested" in str(output):
 			print("the camera has been asked for another exposure")
 			time.sleep(1)
