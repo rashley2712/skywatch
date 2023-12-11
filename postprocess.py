@@ -191,12 +191,28 @@ if __name__ == "__main__":
 	debugOut("Bands: %s"%str(image.getbands()))
 	imageData.save()		
 
-	# Save a copy of the non-annotated image
+	# Save a copy of the raw non-annotated image
 	notextDir = "/home/skywatch/camera/no-text/"
 	notextFile = notextDir + os.path.split(imageFile['filename'])[1]
 	debugOut("Will save an un-annotated image to: %s"%notextFile)
 	image.save(notextFile)
 
+	# Apply any transformations needed
+	try: 
+		transforms = config.camera['transformations']
+		for t in transforms.keys():
+			if t=="rotate" : 
+				image = image.rotate(transforms[t])
+				print("Rotating the image by", transforms[t], "degrees.")
+			if t=="resize" :
+				factor = transforms[t]
+				(width, height) = (int(image.width * factor), int(image.height * factor))
+				image = image.resize( (width, height) )
+				print("Resizing the image by a factor of", transforms[t])
+			
+	except KeyError:
+		print("Transform: No transformations to apply...", flush=True)
+	
 	# Render the annotations onto the image
 	image = renderText(image, imageData)
 	# Write the annotated image
