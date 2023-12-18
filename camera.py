@@ -51,6 +51,52 @@ class camera:
 		self.ephemeris = ephemeris
 
 	def takeImage(self, sunMoon, filename="default"):
+		now = datetime.datetime.now()
+		timeString = now.strftime("%Y%m%d_%H%M%S")
+		self.logData['timestamp'] = timeString
+		if filename=="default":
+			filename = os.path.join(self.outputpath, "%s_%s.jpg"%(self.hostname, timeString))
+		self.status = "exposing"
+		print("Taking exposure using libcamera-still...")
+		cameraCommand = [ "libcamera-still", "-o" , "%s"%filename ] 
+		
+		information("sunMoon: " + json.dumps(sunMoon))
+		#sunMoon['night'] = True
+		if sunMoon['night']:
+			# picam-still -o long_exposure.jpg --shutter 100000000 --gain 1 --awbgains 1,1 --immediate
+			information("This is a night exposure.")
+			self.mode = "night"
+			self.config.load()
+			texp = self.config.camera['suggestedTexp']
+			print("suggested exposure time: %s seconds"%texp)
+			gain = 1.0
+			awbgains = "1,1"
+			cameraCommand.append("--shutter")
+			cameraCommand.append("%d"%(int(texp*1E6)))
+			cameraCommand.append("--gain")
+			cameraCommand.append("%f"%(gain))
+			cameraCommand.append("--awbgains")
+			cameraCommand.append("%s"%awbgains)
+			cameraCommand.append("--immediate")
+			self.logData['exposure'] = texp
+		else: 
+			self.mode = "day"
+			self.logData['exposure'] = -1
+		
+		commandLine =""
+		for s in cameraCommand:
+			commandLine+= s + " "
+		information("calling: %s"%commandLine)
+		output = subprocess.Popen(cameraCommand, stdout=subprocess.PIPE).communicate()[0]
+		if self.mode == "night": print(output.decode("utf-8"), flush=True)
+		
+		self.logData['mostrecent'] = filename
+		information("Camera captured file: %s"%filename)
+		self.status = "idle"
+		
+
+
+	def takeImageLib(self, sunMoon, filename="default"):
 		self.picam2 = Picamera2()
 		self.camera_config = self.picam2.create_still_configuration(main={"size": ( self.width, self.height)}, lores={"size": (640, 480)}, display="lores")
 		self.picam2.configure(self.camera_config)
@@ -63,6 +109,7 @@ class camera:
 		self.status = "exposing"
 		information("sunMoon: " + json.dumps(sunMoon))
 		#sunMoon['night'] = True
+		
 		self.picam2.still_configuration.enable_raw()
 		self.picam2.start("preview", show_preview=False)
 		if sunMoon['night']:
@@ -93,7 +140,7 @@ class camera:
 		imageData.setProperty("timestamp", self.logData['timestamp'])
 		imageData.setProperty("filename", self.logData['mostrecent'].split('/')[-1])
 		imageData.setProperty("ephemeris", self.logData['ephemeris'])
-		imageData.setProperty("camera", self.logData['metadata'])
+		#imageData.setProperty("camera", self.logData['metadata'])
 		imageData.setProperty("exposure", self.logData['exposure'])
 		imageData.setProperty("mode", self.mode)
 		
@@ -201,6 +248,7 @@ if __name__ == "__main__":
 	ephem = ephemeris.ephemeris(config.ephemeris)
 	cameraInstance.attachEphem(ephem)
 	cameraInstance.setHostname(config.identity)
-	cameraInstance.monitor()
+	cameraInstance.takeImage(cameraInstance.ephemeris.getSunMoon())
+	#cameraInstance.monitor()
 	time.sleep(5)
-	cameraInstance.stopMonitor()
+	#cameraInstance.stopMonitor()

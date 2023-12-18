@@ -34,7 +34,7 @@ class ephemeris:
 		period = timeToNewMoon + timeSinceLastNewMoon
 		phase = timeSinceLastNewMoon / period
 		#print("Moon elevation is: %.2f and illumination is: %.2f"%(moon.alt*180/3.14125, moon.phase))
-		if altitude<-5: 
+		if altitude<0: 
 			night = True
 			
 		results = {
