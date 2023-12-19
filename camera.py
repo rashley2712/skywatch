@@ -64,15 +64,15 @@ class camera:
 		#sunMoon['night'] = True
 		if sunMoon['night']:
 			# picam-still -o long_exposure.jpg --shutter 100000000 --gain 1 --awbgains 1,1 --immediate
-			information("This is a night exposure.")
 			self.mode = "night"
 			self.config.load()
 			texp = self.config.camera['suggestedTexp']
-			print("suggested exposure time: %s seconds"%texp)
-			gain = 1.0
-			awbgains = "1,1"
+			information("This is a night exposure, suggested exposure time: %s seconds"%texp)
+			gain = 6.0
+			awbgains = "2,6"
 			cameraCommand.append("--shutter")
 			cameraCommand.append("%d"%(int(texp*1E6)))
+			print("additional parameters", self.config.camera['nightparameters'])
 			cameraCommand.append("--gain")
 			cameraCommand.append("%f"%(gain))
 			cameraCommand.append("--awbgains")
@@ -82,6 +82,8 @@ class camera:
 		else: 
 			self.mode = "day"
 			self.logData['exposure'] = -1
+		
+		cameraCommand.append("--nopreview")
 		
 		commandLine =""
 		for s in cameraCommand:

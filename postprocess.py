@@ -303,7 +303,7 @@ if __name__ == "__main__":
 		
 
 	sizeinBytes = os.path.getsize(imageFile['filename'])
-	information("Image size is: %s %.2f Mb"%(str(image.size), sizeinBytes/1024))
+	information("Image size is: %s %.2f kb"%(str(image.size), sizeinBytes/1024))
 	# If upload is set... upload to skyWATCH server
 	# args.test = True
 	if not args.test: 
