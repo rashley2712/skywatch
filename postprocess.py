@@ -264,6 +264,7 @@ if __name__ == "__main__":
 		if newExpTime > 100: 
 			newExpTime = 100
 			retakeNow = False
+			print("Requested exposure out of bounds >100s.", flush=True)
 
 		config.camera['suggestedTexp'] = round(newExpTime,4)
 		config.save()

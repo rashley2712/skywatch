@@ -68,11 +68,15 @@ class camera:
 			self.config.load()
 			texp = self.config.camera['suggestedTexp']
 			information("This is a night exposure, suggested exposure time: %s seconds"%texp)
-			gain = 6.0
-			awbgains = "2,6"
+			gain = 4.0
+			awbgains = "1,1"
 			cameraCommand.append("--shutter")
 			cameraCommand.append("%d"%(int(texp*1E6)))
 			print("additional parameters", self.config.camera['nightparameters'])
+			try: 
+				awbgains = self.config.camera['nightparameters']['awbgains']
+			except: 
+				print("config file has no awbgains parameters, using %s"%awbgains)
 			cameraCommand.append("--gain")
 			cameraCommand.append("%f"%(gain))
 			cameraCommand.append("--awbgains")
