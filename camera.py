@@ -8,6 +8,13 @@ from picamera2 import Picamera2
 def debugOut(message):
 	if debug: print("DEBUG: %s"%message, flush=True)
 
+def switchLED(state, installPath):
+	if state: 
+		information("Switching ACT LED on.")
+		subprocess.call( [os.path.join(installPath, "ledon.bash")])
+	else:
+		information("Switching ACT LED off")
+		subprocess.call( [os.path.join(installPath, "ledoff.bash")])
 
 def getMostRecentExposureTime():
 	# Generate the list of files in the specified folder
@@ -89,6 +96,9 @@ class camera:
 		
 		cameraCommand.append("--nopreview")
 		
+		# Turn off the ACT(ivity) LED
+		switchLED(False, self.installPath)
+
 		commandLine =""
 		for s in cameraCommand:
 			commandLine+= s + " "
@@ -98,6 +108,10 @@ class camera:
 		
 		self.logData['mostrecent'] = filename
 		information("Camera captured file: %s"%filename)
+		
+		# Turn on the ACT(ivity) LED
+		switchLED(True, self.installPath)
+
 		self.status = "idle"
 		
 
