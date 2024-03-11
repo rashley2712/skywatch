@@ -93,6 +93,12 @@ class camera:
 		else: 
 			self.mode = "day"
 			self.logData['exposure'] = -1
+			try: 
+				awbgains = self.config.camera['dayparameters']['awbgains']
+				cameraCommand.append("--awbgains")
+				cameraCommand.append("%s"%awbgains)	
+			except: 
+				awbgains = "none"
 		
 		cameraCommand.append("--nopreview")
 		
