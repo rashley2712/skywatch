@@ -1,4 +1,4 @@
-import threading, time
+import threading, time, subprocess, os
 
 class sensor_bme280():
 	def __init__(self, config={}):
@@ -114,19 +114,71 @@ class cpuSensor():
 		return self.temperature
 		
 	def monitor(self):
-		while not self.exit:
-			self.readTemp()
-			print(self.name + " monitor:  %.1f\u00b0C"%self.temperature, flush=True)
-			if self.fan: self.attachedFan.checkFan(self.temperature)
-			time.sleep(self.monitorCadence)
+		self.readTemp()
+		print(self.name + " monitor:  %.1f\u00b0C"%self.temperature, flush=True)
+		if self.fan: self.attachedFan.checkFan(self.temperature)
+		self.nextIteration = threading.Timer(self.monitorCadence, self.monitor)
+		self.nextIteration.start()
 		
 	def startMonitor(self):
 		self.monitorThread = threading.Thread(name='non-block', target=self.monitor)
 		self.monitorThread.start()
+			
+	def stopMonitor(self):
+		print("Stopping %s monitor."%(self.name), flush=True)
+		try: 
+			self.nextIteration.cancel()
+		except AttributeError:
+			print("exiting...%s"%self.name)
+		self.exit = True
 
+	
+class sensor_MLX90614():
+	def __init__(self, config={}):
+		# Read this sensor using the binary code .readTsky and .readTamb
+		self.active = False
+		self.fan = False
+		self.installPath = config['installPath']
+		self.readCommand = config['readCommand']
+		self.attachedFans = []
+		self.temperature = -999
+		self.temperature = -999
+		self.name = config['name']
+		try: 
+			self.monitorCadence = config['cadence']
+		except KeyError:
+			self.monitorCadence = 20
+		self.exit = False
+		self.logData = { } 
+
+	def attachFan(self, fan):
+		self.attachedFans.append(fan)
+		self.fan = True
+		
+	def readTemp(self):
+		try: 
+			output = subprocess.check_output([os.path.join(self.installPath, self.readCommand)]).decode('UTF-8')
+			self.temperature = round(float(output.split('\n')[0]),1)
+			self.available = True
+			self.logData['temperature'] = self.temperature
+			
+		except Exception as e:
+			print("Could not read the IR sensor", flush = True)
+			print(e, flush=True)
+			self.available = False
+		return self.temperature
+			
+	def monitor(self):
+		while not self.exit:
+			print("%s: %.2f"%(self.name, self.readTemp()), flush=True)
+			time.sleep(self.monitorCadence)
+		print("%s monitor stopped."%self.name)
+	
+		
+	def startMonitor(self):
+		self.monitorThread = threading.Thread(name='non-block', target=self.monitor)
+		self.monitorThread.start()
 			
 	def stopMonitor(self):
 		print("Stopping %s monitor. Will take up to %d seconds."%(self.name, self.monitorCadence), flush=True)
 		self.exit = True
-
-	

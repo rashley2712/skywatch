@@ -74,6 +74,14 @@ if __name__ == "__main__":
 				sensorObject = meteosensors.sensor_bme280(config = sensor)
 				meteoSensors.append(sensorObject)
 				information("Added sensor '%s' of type '%s'"%(sensor['name'], sensor['sensor']))
+
+			if sensor['sensor'] == "MLX90614":
+				sensor['installPath'] = config.installPath
+				sensorObject = meteosensors.sensor_MLX90614(config = sensor)
+
+				meteoSensors.append(sensorObject)
+				information("Added sensor '%s' of type '%s'"%(sensor['name'], sensor['sensor']))
+
 		if sensor['type']=="CPU":
 			cpuSensor = meteosensors.cpuSensor(config = sensor)
 			meteoSensors.append(cpuSensor)
@@ -87,6 +95,7 @@ if __name__ == "__main__":
 		ephem = ephemeris.ephemeris(config.ephemeris)
 		time.sleep(1)
 	
+	"""
 	# Create a camera object
 	if hasattr(config, "camera"):
 		#print(config.camera)
@@ -96,7 +105,7 @@ if __name__ == "__main__":
 		time.sleep(1)
 		# Start the camera
 		monitors.append(camera)
-
+	"""
 	# Create the web uploader 
 	if hasattr(config, "meteoUploader"):
 		meteoUploader = loggers.webLogger(config.identity, config = config.meteoUploader)
