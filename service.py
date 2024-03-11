@@ -95,7 +95,6 @@ if __name__ == "__main__":
 		ephem = ephemeris.ephemeris(config.ephemeris)
 		time.sleep(1)
 	
-	"""
 	# Create a camera object
 	if hasattr(config, "camera"):
 		#print(config.camera)
@@ -105,7 +104,6 @@ if __name__ == "__main__":
 		time.sleep(1)
 		# Start the camera
 		monitors.append(camera)
-	"""
 	# Create the web uploader 
 	if hasattr(config, "meteoUploader"):
 		meteoUploader = loggers.webLogger(config.identity, config = config.meteoUploader)
