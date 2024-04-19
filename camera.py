@@ -84,6 +84,10 @@ class camera:
 				awbgains = self.config.camera['nightparameters']['awbgains']
 			except: 
 				print("config file has no awbgains parameters, using %s"%awbgains)
+			try:
+				gain = self.config.camera['nightparameters']['gain']
+			except:
+				print("config file does not have a night gain value, using %f"%gain)
 			cameraCommand.append("--gain")
 			cameraCommand.append("%f"%(gain))
 			cameraCommand.append("--awbgains")
