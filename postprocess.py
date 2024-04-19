@@ -256,7 +256,7 @@ if __name__ == "__main__":
 			newExpTime = expTime * 2.5
 			information("image is a quite under-exposed, suggesting exposure goes from %.4f to %.4f seconds."%(expTime, newExpTime))
 			retakeNow = True
-		elif median <112: 
+		elif median <90: 
 			newExpTime = expTime * 1.25
 			information("image is a little under-exposed, suggesting exposure goes from %.4f to %.4f seconds."%(expTime, newExpTime))
 		

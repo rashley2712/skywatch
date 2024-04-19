@@ -30,6 +30,7 @@ class sensor_bme280():
 	def attachFan(self, fan):
 		self.attachedFans.append(fan)
 		self.fan = True
+		print("Just attached a fan")
 		
 	def readTemp(self):
 		try:

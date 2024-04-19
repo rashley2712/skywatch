@@ -6,7 +6,7 @@ import loggers
 from systemd import journal
 
 # Custom skyWATCH libraries
-import camera, config, ephemeris
+import camera, config, ephemeris, fans
 
 def signal_handler(sig, frame):
 	print("Caught Ctrl-C")
@@ -64,6 +64,7 @@ if __name__ == "__main__":
 	# 
 	monitors = []
 
+
 	# Initiliase the sensors
 	meteoSensors = []
 	for sensor in config.sensors:
@@ -85,9 +86,18 @@ if __name__ == "__main__":
 		if sensor['type']=="CPU":
 			cpuSensor = meteosensors.cpuSensor(config = sensor)
 			meteoSensors.append(cpuSensor)
+			
 
 		time.sleep(1)
-	
+
+
+	for fan in config.fans:
+		newFan = fans.fan(fan)
+		for sensor in meteoSensors:
+			if sensor.name == fan['sensor']: 
+				print("Attaching fan %s"%fan['sensor'])
+				sensor.attachFan(newFan)	
+
 
 	# Create an ephemeris object
 	if hasattr(config, "ephemeris"):
