@@ -159,7 +159,7 @@ if __name__ == "__main__":
 		expTime = float(imageData.exposure)
 	except AttributeError:
 		expTime = -1
-		print("JSON does not contain the exposure time.")
+		print("JSON does not contain the exposure time.", flush=True)
 
 	def showTags(tags):
 		for key in tags.keys():
@@ -203,12 +203,12 @@ if __name__ == "__main__":
 		for t in transforms.keys():
 			if t=="rotate" : 
 				image = image.rotate(transforms[t])
-				print("Rotating the image by", transforms[t], "degrees.")
+				print("Rotating the image by", transforms[t], "degrees.", flush=True)
 			if t=="resize" :
 				factor = transforms[t]
 				(width, height) = (int(image.width * factor), int(image.height * factor))
 				image = image.resize( (width, height) )
-				print("Resizing the image by a factor of", transforms[t])
+				print("Resizing the image by a factor of", transforms[t], flush=True)
 			
 	except KeyError:
 		print("Transform: No transformations to apply...", flush=True)
@@ -238,7 +238,7 @@ if __name__ == "__main__":
 		mean = numpy.mean(data)
 		min = numpy.min(data)
 		max = numpy.max(data)
-		print("Peak: %d, Median: %d, Mean: %.1f, Min: %d, Max: %d"%(peak, median, mean, min, max))
+		print("Peak: %d, Median: %d, Mean: %.1f, Min: %d, Max: %d"%(peak, median, mean, min, max), flush=True)
 
 		newExpTime = expTime
 		if median > 240: 
@@ -248,7 +248,7 @@ if __name__ == "__main__":
 		elif median>200:
 			newExpTime = expTime * 0.75
 			information("image is little bit saturated, suggesting exposure goes from %.4f to %.4f seconds."%(expTime, newExpTime))
-		elif median>144:
+		elif median>120:
 			newExpTime = expTime * 0.9
 			information("image is little bit saturated, suggesting exposure goes from %.4f to %.4f seconds."%(expTime, newExpTime))
 
