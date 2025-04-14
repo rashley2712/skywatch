@@ -75,11 +75,15 @@ if __name__ == "__main__":
 				sensorObject = meteosensors.sensor_bme280(config = sensor)
 				meteoSensors.append(sensorObject)
 				information("Added sensor '%s' of type '%s'"%(sensor['name'], sensor['sensor']))
+			
+			if sensor['sensor'] == 'bme680':
+				sensorObject = meteosensors.sensor_bme680(config = sensor)
+				meteoSensors.append(sensorObject)
+				information("Added sensor '%s' of type '%s'"%(sensor['name'], sensor['sensor']))
 
 			if sensor['sensor'] == "MLX90614":
 				sensor['installPath'] = config.installPath
 				sensorObject = meteosensors.sensor_MLX90614(config = sensor)
-
 				meteoSensors.append(sensorObject)
 				information("Added sensor '%s' of type '%s'"%(sensor['name'], sensor['sensor']))
 
@@ -101,6 +105,7 @@ if __name__ == "__main__":
 
 	# Create an ephemeris object
 	if hasattr(config, "ephemeris"):
+		print(config)
 		print("Ephemeris: ", config.ephemeris)
 		ephem = ephemeris.ephemeris(config.ephemeris)
 		time.sleep(1)

@@ -58,27 +58,105 @@ class sensor_bme280():
 		return self.pressure
 			
 	def monitor(self):
-		while not self.exit:
-			self.readTemp()
-			self.readHumidity()
-			self.readPressure()
-			print("%s monitor: %.1f\u00b0C %.1f%% %.1fhPa"%(self.name, self.temperature, self.humidity, self.pressure), flush=True)
-			if self.fan: 
-				for fan in self.attachedFans:
-					fan.checkFan(self.temperature)
+		self.readTemp()
+		self.readHumidity()
+		self.readPressure()
+		print("%s monitor: %.1f\u00b0C %.1f%% %.1fhPa"%(self.name, self.temperature, self.humidity, self.pressure), flush=True)
+		if self.fan: 
+			for fan in self.attachedFans:
+				fan.checkFan(self.temperature)
 	
-			time.sleep(self.monitorCadence)
-		print("%s monitor stopped."%self.name)
+		self.nextIteration = threading.Timer(self.monitorCadence, self.monitor)
+		self.nextIteration.start()
 	
-
-		
 	def startMonitor(self):
 		self.monitorThread = threading.Thread(name='non-block', target=self.monitor)
 		self.monitorThread.start()
 			
 	def stopMonitor(self):
-		print("Stopping %s monitor. Will take up to %d seconds."%(self.name, self.monitorCadence), flush=True)
-		self.exit = True
+		self.nextIteration.cancel()
+		print("%s monitor stopped."%self.name)
+
+
+class sensor_bme680():
+	def __init__(self, config={}):
+		# Initialise the bme680
+		import adafruit_bme680
+		import board
+		i2c = board.I2C()  # uses board.SCL and board.SDA
+		self.active = False
+		decAddress = int(config['address'], 16)
+		try:
+			self.bme680 =  adafruit_bme680.Adafruit_BME680_I2C(i2c, address=decAddress)
+		except ValueError:
+			print("Sensor BME680 failed!", flush=True)
+			self.active = False
+		
+		self.fan = False
+		self.attachedFans = []
+		self.temperature = -999
+		self.humidity = -999
+		self.pressure = -999
+		self.name = config['name']
+		try: 
+			self.monitorCadence = config['cadence']
+		except KeyError:
+			self.monitorCadence = 20
+		self.exit = False
+		self.logData = { } 
+
+	def attachFan(self, fan):
+		self.attachedFans.append(fan)
+		self.fan = True
+		print("Just attached a fan")
+		
+	def readTemp(self):
+		try:
+			self.temperature = round(self.bme680.temperature, 1)
+		except:
+			self.temperature = -999
+		self.logData['temperature'] = self.temperature
+		return self.temperature
+			
+	def readHumidity(self):
+		try:
+			self.humidity = round(self.bme680.humidity, 1)
+		except:
+			self.humidity = -999
+		self.logData['humidity'] = self.humidity
+		return self.humidity
+			
+			
+	def readPressure(self):
+		try:
+			self.pressure = round(self.bme680.pressure, 1)
+		except:
+			self.pressure = -999
+		self.logData['pressure'] = self.pressure
+		return self.pressure
+			
+	def monitor(self):
+		self.readTemp()
+		self.readHumidity()
+		self.readPressure()
+		print("%s monitor: %.1f\u00b0C %.1f%% %.1fhPa"%(self.name, self.temperature, self.humidity, self.pressure), flush=True)
+		if self.fan: 
+			for fan in self.attachedFans:
+				fan.checkFan(self.temperature)
+	
+		self.nextIteration = threading.Timer(self.monitorCadence, self.monitor)
+		self.nextIteration.start()
+		
+	
+	def startMonitor(self):
+		self.monitorThread = threading.Thread(name='non-block', target=self.monitor)
+		self.monitorThread.start()
+			
+	def stopMonitor(self):
+		self.nextIteration.cancel()
+		print("%s monitor stopped."%self.name)
+
+
 
 class cpuSensor():
 	def __init__(self, name = "cpu", config = {}):
@@ -116,7 +194,7 @@ class cpuSensor():
 		
 	def monitor(self):
 		self.readTemp()
-		print(self.name + " monitor:  %.1f\u00b0C"%self.temperature, flush=True)
+		print(self.name + " monitor: %.1f\u00b0C"%self.temperature, flush=True)
 		if self.fan: self.attachedFan.checkFan(self.temperature)
 		self.nextIteration = threading.Timer(self.monitorCadence, self.monitor)
 		self.nextIteration.start()
@@ -170,16 +248,18 @@ class sensor_MLX90614():
 		return self.temperature
 			
 	def monitor(self):
-		while not self.exit:
-			print("%s: %.2f"%(self.name, self.readTemp()), flush=True)
-			time.sleep(self.monitorCadence)
-		print("%s monitor stopped."%self.name)
-	
+		print("%s monitor: %.2f\u00b0C"%(self.name, self.readTemp()), flush=True)
+		self.nextIteration = threading.Timer(self.monitorCadence, self.monitor)
+		self.nextIteration.start()		
 		
 	def startMonitor(self):
 		self.monitorThread = threading.Thread(name='non-block', target=self.monitor)
 		self.monitorThread.start()
 			
 	def stopMonitor(self):
-		print("Stopping %s monitor. Will take up to %d seconds."%(self.name, self.monitorCadence), flush=True)
+		print("Stopping %s monitor."%(self.name), flush=True)
+		try: 
+			self.nextIteration.cancel()
+		except AttributeError:
+			print("exiting...%s"%self.name)
 		self.exit = True

@@ -83,21 +83,27 @@ def information(message):
 	return
 
 def renderText(image, imageData):
-	from PIL import ImageFont
-	from PIL import ImageDraw 
+	try:
+		from PIL import ImageFont
+		from PIL import ImageDraw 
 
-	text = "%s | sun: %s | moon: %s (%s%%)"%(imageData.timestamp, imageData.ephemeris['sunElevation'], imageData.ephemeris['moonElevation'], imageData.ephemeris['moonIllumination'])
-	print("Adding annotation:", text)
-	draw = ImageDraw.Draw(image)
-	size = image.size
-	if size[0]>3000: fontSize = 54
-	else: fontSize = 26
-	font = ImageFont.truetype("DejaVuSans.ttf", fontSize)
-	w, h = draw.textsize(text, font=font)
-	W, H = image.size
-	draw.text(((W-w)/2,0), text, (255,255,255), font=font)
+		text = "%s | sun: %s | moon: %s (%s%%)"%(imageData.timestamp, imageData.ephemeris['sunElevation'], imageData.ephemeris['moonElevation'], imageData.ephemeris['moonIllumination'])
+		print("Adding annotation:", text)
+		draw = ImageDraw.Draw(image)
+		size = image.size
+		if size[0]>3000: fontSize = 54
+		else: fontSize = 26
+		font = ImageFont.truetype("DejaVuSans.ttf", fontSize)
+		w, h = draw.textsize(text, font=font)
+		W, H = image.size
+		draw.text(((W-w)/2,0), text, (255,255,255), font=font)
+
+	except Exception as e:
+		print("Unable to render text")
+		print(e)
 
 	return image
+
 
 	
 if __name__ == "__main__":

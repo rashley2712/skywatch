@@ -14,7 +14,7 @@ class ephemeris:
 	def getSunMoon(self): 
 		night = False
 		meteoLocation = ephem.Observer()
-		#print("location info:", self.locationInfo)
+		print("location info:", self.locationInfo)
 		meteoLocation.lon = str(self.locationInfo['longitude'])
 		meteoLocation.lat = str(self.locationInfo['latitude'])
 		meteoLocation.elevation = self.locationInfo['elevation']

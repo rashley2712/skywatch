@@ -2,7 +2,7 @@
 import signal, sys, argparse, time, datetime, threading, os, json, subprocess, socket
 import config, ephemeris
 import pprint
-from picamera2 import Picamera2
+#from picamera2 import Picamera2
 
 
 def debugOut(message):
