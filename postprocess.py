@@ -200,7 +200,7 @@ if __name__ == "__main__":
 	imageData.save()		
 
 	# Save a copy of the raw non-annotated image
-	notextDir = "/home/rashley/Pictures/no-text/"
+	notextDir = config.camera["notextpath"]
 	notextFile = notextDir + os.path.split(imageFile['filename'])[1]
 	debugOut("Will save an un-annotated image to: %s"%notextFile)
 	image.save(notextFile)
