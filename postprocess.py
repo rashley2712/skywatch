@@ -94,7 +94,8 @@ def renderText(image, imageData):
 		if size[0]>3000: fontSize = 54
 		else: fontSize = 26
 		font = ImageFont.truetype("DejaVuSans.ttf", fontSize)
-		w, h = draw.textsize(text, font=font)
+		w = draw.textlength(text, font=font)
+		h = fontSize * 1
 		W, H = image.size
 		draw.text(((W-w)/2,0), text, (255,255,255), font=font)
 
@@ -110,10 +111,11 @@ if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='Performs post processing of the skycam images.')
 	parser.add_argument('-t', '--cadence', type=int, default=5, help='Cadence in seconds.' )
 	parser.add_argument('-f', '--filename', type=str, default="latest", help='Filename to process (or look for the latest).' )
-	parser.add_argument('-c', '--config', type=str, default='/home/pi/code/meteopi/local.cfg', help='Config file.' )
+	parser.add_argument('-c', '--config', type=str, default='/home/skywatch/code/skywatch/local.cfg', help='Config file.' )
 	parser.add_argument('--debug', action="store_true", default=False, help='Add debug information to the output.' )
 	parser.add_argument('--test', action="store_true", default=False, help='Test mode. Don''t upload any data.' )
 	parser.add_argument('--display', action="store_true", default=False, help='Show preview and graphs.' )
+	
 	
 	args = parser.parse_args()
 	debug = args.debug
@@ -198,7 +200,7 @@ if __name__ == "__main__":
 	imageData.save()		
 
 	# Save a copy of the raw non-annotated image
-	notextDir = "/home/skywatch/camera/no-text/"
+	notextDir = "/home/rashley/Pictures/no-text/"
 	notextFile = notextDir + os.path.split(imageFile['filename'])[1]
 	debugOut("Will save an un-annotated image to: %s"%notextFile)
 	image.save(notextFile)
