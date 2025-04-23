@@ -90,6 +90,7 @@ if __name__ == "__main__":
 		if sensor['type']=="CPU":
 			cpuSensor = meteosensors.cpuSensor(config = sensor)
 			meteoSensors.append(cpuSensor)
+			information("Added sensor '%s' of type '%s'"%(sensor['name'], sensor['type']))
 			
 
 		time.sleep(1)

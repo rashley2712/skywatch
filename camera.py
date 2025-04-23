@@ -93,6 +93,10 @@ class camera:
 			cameraCommand.append("--awbgains")
 			cameraCommand.append("%s"%awbgains)
 			cameraCommand.append("--immediate")
+			cameraCommand.append("--autofocus-mode")
+			cameraCommand.append("manual")
+			cameraCommand.append("--lens-position")
+			cameraCommand.append("6.0")
 			self.logData['exposure'] = texp
 		else: 
 			self.mode = "day"

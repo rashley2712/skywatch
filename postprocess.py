@@ -87,7 +87,7 @@ def renderText(image, imageData):
 		from PIL import ImageFont
 		from PIL import ImageDraw 
 
-		text = "%s | sun: %s | moon: %s (%s%%)"%(imageData.timestamp, imageData.ephemeris['sunElevation'], imageData.ephemeris['moonElevation'], imageData.ephemeris['moonIllumination'])
+		text = "%s | sun: %.2f | moon: %.2f (%.2f%%)"%(imageData.timestamp, imageData.ephemeris['sunElevation'], imageData.ephemeris['moonElevation'], imageData.ephemeris['moonIllumination'])
 		print("Adding annotation:", text)
 		draw = ImageDraw.Draw(image)
 		size = image.size
@@ -201,7 +201,7 @@ if __name__ == "__main__":
 
 	# Save a copy of the raw non-annotated image
 	notextDir = config.camera["notextpath"]
-	notextFile = notextDir + os.path.split(imageFile['filename'])[1]
+	notextFile = os.path.join(notextDir, os.path.split(imageFile['filename'])[1])
 	debugOut("Will save an un-annotated image to: %s"%notextFile)
 	image.save(notextFile)
 
