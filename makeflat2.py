@@ -142,6 +142,9 @@ if __name__ == "__main__":
 	if args.display: flat.show(title = "test")
 	
 	# Save the balance frame to disk	
+	balance_data = [balance_r, balance_g, balance_b]
+	numpy.save("balance.dat", balance_data)
+	
 	hdu_r = fits.PrimaryHDU(data = numpy.reshape(balance_r, (size[1], size[0])))
 	hdu_g = fits.PrimaryHDU(data = numpy.reshape(balance_g, (size[1], size[0])))
 	hdu_b = fits.PrimaryHDU(data = numpy.reshape(balance_b, (size[1], size[0])))
