@@ -140,22 +140,6 @@ if __name__ == "__main__":
 		balance_g =  median_g / numpy.mean(median_g) 
 		balance_b =  median_b / numpy.mean(median_b) 
 
-		flat_r = numpy.rint(balance_r*255)
-		flat_r = numpy.array(flat_r, dtype="uint8")
-		flat_r = numpy.reshape(flat_r, (size[1], size[0]))
-
-		flat_g = numpy.rint(balance_g*255)
-		flat_g = numpy.array(flat_g, dtype="uint8")
-		flat_g = numpy.reshape(flat_g, (size[1], size[0]))
-
-		flat_b = numpy.rint(balance_b*255)
-		flat_b = numpy.array(flat_b, dtype="uint8")
-		flat_b = numpy.reshape(flat_b, (size[1], size[0]))
-		
-		imageflat_r = PIL.Image.fromarray(flat_r, mode=None)
-		imageflat_g = PIL.Image.fromarray(flat_g, mode=None)
-		imageflat_b = PIL.Image.fromarray(flat_b, mode=None)
-
 		median_r = numpy.reshape(median_r, (size[1], size[0]))
 		median_r = numpy.array(median_r, dtype="uint8")
 		median_r = PIL.Image.fromarray(median_r, mode=None)
