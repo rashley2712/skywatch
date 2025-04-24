@@ -126,29 +126,108 @@ if __name__ == "__main__":
 
 		axis = 0
 		print("Computing median image for the r-band.")
-		median = numpy.median(r_flats, axis = axis)
-		balance =  median / numpy.mean(median) 
-		hdu = fits.PrimaryHDU(data = numpy.reshape(balance, (size[1], size[0])))
-		hdul = fits.HDUList([hdu])
-		hdul.writeto("balance_r.fits", overwrite=True)
-		print("Written the balance FITS file for the r-band.")
-		
+		median_r = numpy.median(r_flats, axis = axis)
 		print("Computing median image for the g-band.")
-		median = numpy.median(g_flats, axis = axis)
-		balance =  median / numpy.mean(median) 
-		hdu = fits.PrimaryHDU(data = numpy.reshape(balance, (size[1], size[0])))
-		hdul = fits.HDUList([hdu])
-		hdul.writeto("balance_g.fits", overwrite=True)
-		print("Written the balance FITS file for the g-band.")
-		
+		median_g = numpy.median(g_flats, axis = axis)
 		print("Computing median image for the b-band.")
-		median = numpy.median(b_flats, axis = axis)
-		balance =  median / numpy.mean(median) 
-		hdu = fits.PrimaryHDU(data = numpy.reshape(balance, (size[1], size[0])))
-		hdul = fits.HDUList([hdu])
-		hdul.writeto("balance_b.fits", overwrite=True)
-		print("Written the balance FITS file for the b-band.")
-		
+		median_b = numpy.median(b_flats, axis = axis)
+
 		print("number of flats processed:", numflats)
 
-		sys.exit()
+		median = [ median_r, median_g, median_b ]
+		numpy.save("median.npy", median)
+		print("Saved the median image data to median.npy")
+		
+		balance_r =  median_r / numpy.mean(median_r) 
+		balance_g =  median_g / numpy.mean(median_g) 
+		balance_b =  median_b / numpy.mean(median_b) 
+
+		median_r = numpy.reshape(median_r, (size[1], size[0]))
+		median_r = numpy.array(median_r, dtype="uint8")
+		median_r = PIL.Image.fromarray(median_r, mode=None)
+		median_g = numpy.reshape(median_g, (size[1], size[0]))
+		median_g = numpy.array(median_g, dtype="uint8")
+		median_g = PIL.Image.fromarray(median_g, mode=None)
+		median_b = numpy.reshape(median_b, (size[1], size[0]))
+		median_b = numpy.array(median_b, dtype="uint8")
+		median_b = PIL.Image.fromarray(median_b, mode=None)
+		flat = PIL.Image.merge("RGB", (median_r, median_g, median_b))
+		if args.display: flat.show(title = "test")
+		
+		# Save the balance frame to disk	
+		balance_data = [balance_r, balance_g, balance_b]
+		numpy.save("balance.npy", balance_data)
+		print("Saved the balance frame data to balance.npy")
+
+		hdu_r = fits.PrimaryHDU(data = numpy.reshape(balance_r, (size[1], size[0])))
+		hdu_g = fits.PrimaryHDU(data = numpy.reshape(balance_g, (size[1], size[0])))
+		hdu_b = fits.PrimaryHDU(data = numpy.reshape(balance_b, (size[1], size[0])))
+		hdul = fits.HDUList([hdu_r])
+		hdul.writeto("balance_r.fits", overwrite=True)
+		hdul = fits.HDUList([hdu_g])
+		hdul.writeto("balance_g.fits", overwrite=True)
+		hdul = fits.HDUList([hdu_b])
+		hdul.writeto("balance_b.fits", overwrite=True)
+
+	from PIL import ImageOps	
+	sampleFilename =  args.sample
+	print("Opening:", sampleFilename)
+	sample = PIL.Image.open(sampleFilename)
+	size = sample.size
+	histogram = getHistoRGB(sample)
+	plotHistoRGB(histogram)
+	#sample = ImageOps.autocontrast(sample, cutoff= (1, 99))
+	sample_r = numpy.array(list(sample.getdata(band=0)), dtype="uint8") 
+	sample_g = numpy.array(list(sample.getdata(band=1)), dtype="uint8") 
+	sample_b = numpy.array(list(sample.getdata(band=2)), dtype="uint8") 
+
+	print("Loaded image", sample_r)
+	sample_r = sample_r / balance_r
+	print("deflat image", sample_r)
+	sample_g = sample_g / balance_g
+	sample_b = sample_b / balance_b
+	
+	sample_r = sample_r.clip(0,255)
+	sample_r = numpy.rint(sample_r)
+	sample_r = numpy.array(sample_r, dtype="uint8")
+	sample_r = numpy.reshape(sample_r, (size[1], size[0]))
+
+	sample_g = sample_g.clip(0,255)
+	sample_g = numpy.rint(sample_g)
+	sample_g = numpy.array(sample_g, dtype="uint8")
+	sample_g = numpy.reshape(sample_g, (size[1], size[0]))
+
+	sample_b = sample_b.clip(0,255)
+	sample_b = numpy.rint(sample_b)
+	sample_b = numpy.array(sample_b, dtype="uint8")
+	sample_b = numpy.reshape(sample_b, (size[1], size[0]))
+
+	deflat_r = PIL.Image.fromarray(sample_r, mode=None)
+	deflat_g = PIL.Image.fromarray(sample_g, mode=None)
+	deflat_b = PIL.Image.fromarray(sample_b, mode=None)
+	deflat = PIL.Image.merge("RGB", (deflat_r, deflat_g, deflat_b))
+	
+	if args.display: sample.show()
+	if args.display: deflat.show()
+
+	from PIL import ImageChops
+	difference = ImageChops.difference(sample, flat)
+	difference = ImageChops.constant(difference, 127)
+	difference.show()
+	
+	histogram = getHistoRGB(deflat)
+	plotHistoRGB(histogram)
+	grayscale = ImageOps.grayscale(deflat)
+	histogram = grayscale.histogram()
+	print(histogram)
+	plotHistoL(histogram)
+	contrast = ImageOps.autocontrast(grayscale, cutoff = (0.01, 99.99), preserve_tone=True)
+	# contrast = ImageOps.equalize(grayscale)
+	histogram = contrast.histogram()
+	print(histogram)
+	plotHistoL(histogram)
+	contrast.show()
+	contrast.save("sample_deflat.png")
+
+	
+	sys.exit()
