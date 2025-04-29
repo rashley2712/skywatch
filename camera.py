@@ -36,20 +36,24 @@ def getMostRecentExposureTime():
 class camera:
 	def __init__(self, config, installPath, configFile):
 		self.status = "init"
-		self.width = int(config.camera['width'])
-		self.height = int(config.camera['height'])
-		self.width = 4608
-		self.height = 2592
+		try:
+			self.width = int(config.camera['width'])
+		except KeyError:
+			self.width = 0
+		try:	
+			self.height = int(config.camera['height'])
+		except KeyError:
+			self.height = 0
 		self.logData = {}
 		self.monitorCadence = config.camera['cadence']
 		self.outputpath = config.camera['outputpath']
 		self.name = config.camera['name']
-		self.exit = False
 		self.status = "idle"
 		self.installPath = installPath
 		self.configFile = configFile
 		self.hostname = "unknown"
 		self.config = config
+		self.savedFilename = "test.jpg"
 
 	def setHostname(self, hostname):
 		self.hostname = hostname
@@ -66,6 +70,7 @@ class camera:
 		self.status = "exposing"
 		print("Taking exposure using libcamera-still...")
 		cameraCommand = [ "libcamera-still", "-o" , "%s"%filename ] 
+		self.savedFilename = filename
 		
 		information("sunMoon: " + json.dumps(sunMoon))
 		#sunMoon['night'] = True
@@ -109,11 +114,16 @@ class camera:
 				awbgains = "none"
 		
 		cameraCommand.append("--nopreview")
+
+		cameraCommand.append("--width") 
+		cameraCommand.append(str(self.width)) 
+		cameraCommand.append("--height") 
+		cameraCommand.append(str(self.height)) 
 		
 		# Turn off the ACT(ivity) LED
 		switchLED(False, self.installPath)
 
-		commandLine =""
+		commandLine = ""
 		for s in cameraCommand:
 			commandLine+= s + " "
 		information("calling: %s"%commandLine)
@@ -169,8 +179,10 @@ class camera:
 		
 	def writeMetadata(self):
 		import imagedata
-		imageData = imagedata.imagedata(debug=True)
-		imageData.setFilename(os.path.splitext(self.logData['mostrecent'])[0] + ".json")
+		baseName = os.path.splitext(self.savedFilename.split('/')[-1])[0] + ".json"
+		JSONFilename =  self.config.camera["JSONpath"] + "/" + baseName
+		imageData = imagedata.imagedata()
+		imageData.setFilename(JSONFilename)
 		imageData.setProperty("timestamp", self.logData['timestamp'])
 		imageData.setProperty("filename", self.logData['mostrecent'].split('/')[-1])
 		imageData.setProperty("ephemeris", self.logData['ephemeris'])
@@ -282,7 +294,8 @@ if __name__ == "__main__":
 	ephem = ephemeris.ephemeris(config.ephemeris)
 	cameraInstance.attachEphem(ephem)
 	cameraInstance.setHostname(config.identity)
-	cameraInstance.takeImage(cameraInstance.ephemeris.getSunMoon())
-	#cameraInstance.monitor()
+	
+
+	cameraInstance.monitor()
 	time.sleep(5)
-	#cameraInstance.stopMonitor()
+	cameraInstance.stopMonitor()

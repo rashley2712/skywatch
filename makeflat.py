@@ -132,6 +132,7 @@ if __name__ == "__main__":
 		hdul = fits.HDUList([hdu])
 		hdul.writeto("balance_r.fits", overwrite=True)
 		print("Written the balance FITS file for the r-band.")
+		numpy.save("balance_r.npy", balance)
 		
 		print("Computing median image for the g-band.")
 		median = numpy.median(g_flats, axis = axis)
@@ -140,6 +141,7 @@ if __name__ == "__main__":
 		hdul = fits.HDUList([hdu])
 		hdul.writeto("balance_g.fits", overwrite=True)
 		print("Written the balance FITS file for the g-band.")
+		numpy.save("balance_g.npy", balance)
 		
 		print("Computing median image for the b-band.")
 		median = numpy.median(b_flats, axis = axis)
@@ -148,6 +150,7 @@ if __name__ == "__main__":
 		hdul = fits.HDUList([hdu])
 		hdul.writeto("balance_b.fits", overwrite=True)
 		print("Written the balance FITS file for the b-band.")
+		numpy.save("balance_b.npy", balance)
 		
 		print("number of flats processed:", numflats)
 

@@ -9,6 +9,7 @@ import config, imagedata
 import sys
 import PIL.Image
 import PIL.ExifTags
+import time
 
 def plotHistoRGB(histogram):
 	import matplotlib.pyplot
@@ -144,7 +145,9 @@ if __name__ == "__main__":
 		imageFile = { "filename": args.filename } 
 
 	imageData = imagedata.imagedata(debug = False)
-	imageData.setFilename(os.path.splitext(imageFile['filename'])[0] + ".json")
+	JSONFilename = os.path.join(config.camera["JSONpath"], os.path.splitext(imageFile["filename"].split('/')[-1])[0] + ".json")
+	print("JSONFilename:", JSONFilename)
+	imageData.setFilename(JSONFilename)
 	imageData.load()
 	imageData.show()
 	
@@ -197,36 +200,11 @@ if __name__ == "__main__":
 	if imageData.mode=="night":
 		imageData.setProperty("exposure", round(expTime, 2))
 	debugOut("Bands: %s"%str(image.getbands()))
+
 	imageData.save()		
 
-	# Save a copy of the raw non-annotated image
-	notextDir = config.camera["notextpath"]
-	notextFile = os.path.join(notextDir, os.path.split(imageFile['filename'])[1])
-	debugOut("Will save an un-annotated image to: %s"%notextFile)
-	image.save(notextFile)
-
-	# Apply any transformations needed
-	try: 
-		transforms = config.camera['transformations']
-		for t in transforms.keys():
-			if t=="rotate" : 
-				image = image.rotate(transforms[t])
-				print("Rotating the image by", transforms[t], "degrees.", flush=True)
-			if t=="resize" :
-				factor = transforms[t]
-				(width, height) = (int(image.width * factor), int(image.height * factor))
-				image = image.resize( (width, height) )
-				print("Resizing the image by a factor of", transforms[t], flush=True)
-			
-	except KeyError:
-		print("Transform: No transformations to apply...", flush=True)
-	
-	# Render the annotations onto the image
-	image = renderText(image, imageData)
-	# Write the annotated image
-	image.save(imageFile['filename'])
-
 	if imageData.mode == "night":
+	#if True:
 		# Choose the central 12% of the image
 		left = int( width/2 - width/8)
 		right = int( width/2 + width/8)
@@ -277,7 +255,87 @@ if __name__ == "__main__":
 		config.camera['suggestedTexp'] = round(newExpTime,4)
 		config.save()
 		
+	if retakeNow:
+		print("retake requested", flush=True)
+		sys.exit(1)
+	
+
+	if imageData.mode=="night":
+		print("Performing a de-flat process.")
+		# Process the balance frame
+
+		# Split the image into RGB
+		r_data = numpy.array(list(image.getdata(band=0)), dtype="uint8")
+		g_data = numpy.array(list(image.getdata(band=1)), dtype="uint8")
+		b_data = numpy.array(list(image.getdata(band=2)), dtype="uint8")
+		print("Split the raw image into [R, G, B] bands.")
 		
+		# Load the numpy data
+		balance = numpy.load(config.processor["balance"]["r"])
+		print("Loaded the r-band balance data.")
+		r_data = r_data / balance
+		
+		balance = numpy.load(config.processor["balance"]["g"])
+		print("Loaded the g-band balance data.")
+		g_data = g_data / balance
+		
+		balance = numpy.load(config.processor["balance"]["b"])
+		b_data = b_data / balance
+		print("Loaded the b-band balance data.")
+		
+		# Re-construct the image
+		processed_r = r_data.clip(0,255)
+		processed_r = numpy.rint(processed_r)
+		processed_r = numpy.array(processed_r, dtype="uint8")
+		processed_r = numpy.reshape(processed_r, (size[1], size[0]))
+
+		processed_g = g_data.clip(0,255)
+		processed_g = numpy.rint(processed_g)
+		processed_g = numpy.array(processed_g, dtype="uint8")
+		processed_g = numpy.reshape(processed_g, (size[1], size[0]))
+
+		processed_b = b_data.clip(0,255)
+		processed_b = numpy.rint(processed_b)
+		processed_b = numpy.array(processed_b, dtype="uint8")
+		processed_b = numpy.reshape(processed_b, (size[1], size[0]))
+
+		processed_r = PIL.Image.fromarray(processed_r, mode=None)
+		processed_g = PIL.Image.fromarray(processed_g, mode=None)
+		processed_b = PIL.Image.fromarray(processed_b, mode=None)
+		processed = PIL.Image.merge("RGB", (processed_r, processed_g, processed_b))
+	else:
+		print("Not performing a de-flat process.")
+		processed = image.copy()		
+	processedPath = config.processor['processedpath']
+	filename = imageData.filename
+	processedFilename = os.path.join(processedPath, filename)
+	processed.save(processedFilename)
+	print("Save processed image to %s"%processedFilename)
+	
+
+	sys.exit()
+	# Apply any transformations needed for the web version of the image
+	try: 
+		transforms = config.camera['transformations']
+		for t in transforms.keys():
+			if t=="rotate" : 
+				image = image.rotate(transforms[t])
+				print("Rotating the image by", transforms[t], "degrees.", flush=True)
+			if t=="resize" :
+				factor = transforms[t]
+				(width, height) = (int(image.width * factor), int(image.height * factor))
+				image = image.resize( (width, height) )
+				print("Resizing the image by a factor of", transforms[t], flush=True)
+			
+	except KeyError:
+		print("Transform: No transformations to apply...", flush=True)
+	
+	# Render the annotations onto the image
+	image = renderText(image, imageData)
+	# Write the annotated image
+	image.save(imageFile['filename'])
+
+	
 
 	lowBandwidth = False
 	try:
@@ -324,8 +382,8 @@ if __name__ == "__main__":
 		except AttributeError:
 			URL = "http://localhost:8080/pictureupload"
 		uploadToServer(imageFile['filename'], URL)	
-
-		# also upload the image meta data to the BigQuery table
+		time.sleep(3)
+		# Upload the image meta data to the BigQuery table
 		metaURL = URL[0:URL.rfind("/")] + "/imagedata"
 		print("Uploading image meta data to %s"%metaURL)
 		tmstp = imageData._json['timestamp']
