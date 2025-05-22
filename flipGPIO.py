@@ -18,8 +18,9 @@ def fanOff(pinID):
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='Monitors the CPU temp and turns the fan on if above a certain temperature..')
-	parser.add_argument('-c', '--cadence', type=int, default=5, help='Cadence in seconds.' )
+	parser.add_argument('-c', '--cadence', type=float, default=5, help='Cadence in seconds.' )
 	parser.add_argument('-p', '--pin', type=int, default=21, help='Pin number to flip.' )
+	parser.add_argument('-n', '--nolog', action="store_true", default=False, help='Don\'t output info.' )
 	args = parser.parse_args()
 	cadence = args.cadence
 	debug = False
@@ -29,11 +30,12 @@ if __name__ == "__main__":
 	pinID = args.pin
 	GPIO.setup(pinID, GPIO.OUT, initial=GPIO.HIGH) #
 	
-	while True:
-		print("Setting pin #%d to high"%pinID)
+	stop = False
+	while not stop:
+		if not args.nolog: print("Setting pin #%d to high"%pinID)
 		GPIO.output(pinID, GPIO.HIGH) #
 		time.sleep(cadence)	
-		print("Setting pin #%d to low"%pinID)
+		if not args.nolog: print("Setting pin #%d to low"%pinID)
 		GPIO.output(pinID, GPIO.LOW) #
 		
 		time.sleep(cadence)
