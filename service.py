@@ -66,11 +66,10 @@ if __name__ == "__main__":
 
 
 	# Initiliase the sensors
+	import meteosensors
 	meteoSensors = []
 	for sensor in config.sensors:
-		if sensor['type']=="meteo":
-			import meteosensors
- 
+		if sensor['type']=="meteo":		
 			if sensor['sensor'] == 'bme280':
 				sensorObject = meteosensors.sensor_bme280(config = sensor)
 				meteoSensors.append(sensorObject)
