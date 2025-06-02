@@ -1,6 +1,11 @@
 {
-
     "locations": [
+        {
+            "name": "liverpool",
+            "latitude": 53.39,
+            "longitude": -2.98,
+            "elevation": 0
+        },
         {
             "name": "roque",
             "latitude": 28.7610049,

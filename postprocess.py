@@ -260,7 +260,7 @@ if __name__ == "__main__":
 		sys.exit(1)
 	
 
-	if imageData.mode=="night":
+	if imageData.mode=="nightdkjlfkldf":
 		print("Performing a de-flat process.")
 		# Process the balance frame
 
@@ -313,10 +313,10 @@ if __name__ == "__main__":
 	print("Save processed image to %s"%processedFilename)
 	
 
-	sys.exit()
+	print("Preparing the image for web upload.", flush = True)
 	# Apply any transformations needed for the web version of the image
 	try: 
-		transforms = config.camera['transformations']
+		transforms = config.processor['web']
 		for t in transforms.keys():
 			if t=="rotate" : 
 				image = image.rotate(transforms[t])
@@ -325,17 +325,20 @@ if __name__ == "__main__":
 				factor = transforms[t]
 				(width, height) = (int(image.width * factor), int(image.height * factor))
 				image = image.resize( (width, height) )
-				print("Resizing the image by a factor of", transforms[t], flush=True)
-			
+				print("Resizing the image by a factor of", transforms[t], flush=True)	
 	except KeyError:
 		print("Transform: No transformations to apply...", flush=True)
 	
+	uploadURL = config.processor["cameraUploadURL"]
+	webPath = config.processor["webPath"]
+		
 	# Render the annotations onto the image
 	image = renderText(image, imageData)
 	# Write the annotated image
-	image.save(imageFile['filename'])
-
-	
+	webFilename = os.path.join(webPath, imageFile['filename'].split('/')[-1])
+	imageFile['webFilename'] = webFilename
+	print(imageFile)
+	image.save(imageFile['webFilename'])
 
 	lowBandwidth = False
 	try:
@@ -375,13 +378,13 @@ if __name__ == "__main__":
 	# args.test = True
 	if not args.test: 
 		#uploadMetadata(imageData.getJSON(), config.imagedataURL)
-		URL = config.camera['cameraUploadURL']
+		URL = config.processor['cameraUploadURL']
 		try: 
 			if config.camera['local'] == "true":
 				URL = config.camera['localURL']
 		except AttributeError:
 			URL = "http://localhost:8080/pictureupload"
-		uploadToServer(imageFile['filename'], URL)	
+		uploadToServer(imageFile['webFilename'], URL)	
 		time.sleep(3)
 		# Upload the image meta data to the BigQuery table
 		metaURL = URL[0:URL.rfind("/")] + "/imagedata"
@@ -407,12 +410,6 @@ if __name__ == "__main__":
 			success = False
 			print(e, flush=True)
 		
-	if retakeNow:
-		print("retake requested", flush=True)
-		sys.exit(1)
-	else:
-		sys.exit(0)
-	
 
 	
 	
