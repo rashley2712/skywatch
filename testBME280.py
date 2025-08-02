@@ -27,4 +27,4 @@ while True:
 	pressure = round(bme280.pressure, 1)
 	humidity = round(bme280.humidity, 1)
 	print('%s - %.1f %sC\t %.1f hPa\t %.1f %%'%(now, temperature, '\u00b0', pressure, humidity), flush=True)
-	time.sleep(10)
+	time.sleep(2)

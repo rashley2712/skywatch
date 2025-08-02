@@ -9,7 +9,7 @@ import board
 import adafruit_bme680
 i2c = board.I2C()
 
-# Initialise the bme280
+# Initialise the bme680
 address = "0x76"
 i2c = board.I2C()  # uses board.SCL and board.SDA
 decAddress = int(address, 16)
@@ -28,4 +28,4 @@ while True:
 	pressure = round(bme680.pressure, 1)
 	humidity = round(bme680.humidity, 1)
 	print('%s - %.1f %sC\t %.1f hPa\t %.1f %%'%(now, temperature, '\u00b0', pressure, humidity), flush=True)
-	time.sleep(10)
+	time.sleep(2)
