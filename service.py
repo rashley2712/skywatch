@@ -75,6 +75,11 @@ if __name__ == "__main__":
 				meteoSensors.append(sensorObject)
 				information("Added sensor '%s' of type '%s'"%(sensor['name'], sensor['sensor']))
 			
+			if sensor['sensor'] == 'bmp280':
+				sensorObject = meteosensors.sensor_bmp280(config = sensor)
+				meteoSensors.append(sensorObject)
+				information("Added sensor '%s' of type '%s'"%(sensor['name'], sensor['sensor']))
+			
 			if sensor['sensor'] == 'bme680':
 				sensorObject = meteosensors.sensor_bme680(config = sensor)
 				meteoSensors.append(sensorObject)

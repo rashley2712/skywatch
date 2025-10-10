@@ -11,16 +11,16 @@ class fan():
 		self.hysterisis = config['tempstart'] - config['tempstop']
 		GPIO.setmode(GPIO.BCM) # Use BCM pin numbering
 		GPIO.setup(self.GPIO, GPIO.OUT, initial=GPIO.LOW)
-		self.fanOn = False
-		self.logData =  { "status" : "off" }
+		self.fanOn = "undefined"
+		self.logData =  { "status" : "undefined" }
 		
 	def checkFan(self, temp):
 		if temp>self.triggerTemperature: 
-			if not self.fanOn:
+			if not self.fanOn or self.fanOn=="undefined":
 				print("Input temperature is above %d... Turning on %s."%(self.triggerTemperature, self.name), flush=True)
 				self.on()
 		if temp<self.triggerTemperature-self.hysterisis:
-			if self.fanOn:
+			if self.fanOn or self.fanOn=="undefined":
 				print("Input temperature is below %d... Turning off %s."%(self.triggerTemperature-self.hysterisis, self.name), flush=True)
 				self.off()
 		

@@ -156,6 +156,72 @@ class sensor_bme680():
 		self.nextIteration.cancel()
 		print("%s monitor stopped."%self.name)
 
+class sensor_bmp280():
+	def __init__(self, config={}):
+		# Initialise the bme280
+		#from adafruit_bme280 import basic as adafruit_bme280
+		import adafruit_bmp280
+
+		import board
+		i2c = board.I2C()  # uses board.SCL and board.SDA
+		self.active = False
+		decAddress = int(config['address'], 16)
+		try:
+			self.bmp280 = adafruit_bmp280.Adafruit_BMP280_I2C(i2c, address = decAddress)
+		except ValueError:
+			print("Sensor BMP280 failed!", flush=True)
+			self.active = False
+		
+		self.fan = False
+		self.attachedFans = []
+		self.temperature = -999
+		self.pressure = -999
+		self.name = config['name']
+		try: 
+			self.monitorCadence = config['cadence']
+		except KeyError:
+			self.monitorCadence = 20
+		self.exit = False
+		self.logData = { } 
+
+	def attachFan(self, fan):
+		self.attachedFans.append(fan)
+		self.fan = True
+		
+	def readTemp(self):
+		try:
+			self.temperature = round(self.bmp280.temperature, 1)
+		except:
+			self.temperature = -999
+		self.logData['temperature'] = self.temperature
+		return self.temperature
+						
+	def readPressure(self):
+		try:
+			self.pressure = round(self.bmp280.pressure, 1)
+		except:
+			self.pressure = -999
+		self.logData['pressure'] = self.pressure
+		return self.pressure
+			
+	def monitor(self):
+		self.readTemp()
+		self.readPressure()
+		print("%s monitor: %.1f\u00b0C %.1fhPa"%(self.name, self.temperature, self.pressure), flush=True)
+		if self.fan: 
+			for fan in self.attachedFans:
+				fan.checkFan(self.temperature)
+	
+		self.nextIteration = threading.Timer(self.monitorCadence, self.monitor)
+		self.nextIteration.start()
+	
+	def startMonitor(self):
+		self.monitorThread = threading.Thread(name='non-block', target=self.monitor)
+		self.monitorThread.start()
+			
+	def stopMonitor(self):
+		self.nextIteration.cancel()
+		print("%s monitor stopped."%self.name)
 
 
 class cpuSensor():
