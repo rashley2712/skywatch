@@ -9,11 +9,18 @@ import sys
 
 # Initialise the bme280
 address = "0x77"
+if len(sys.argv)>1:
+	print("Using %s as the address of the device."%sys.argv[1])
+	address = str(sys.argv[1])
+
+
 from adafruit_bme280 import basic as adafruit_bme280
 i2c = board.I2C()  # uses board.SCL and board.SDA
 decAddress = int(address, 16)
+print("dec address is: ", decAddress)
 try:
-	bme280 = adafruit_bme280.Adafruit_BME280_I2C(i2c, address = decAddress)
+	bme280 = adafruit_bme280.Adafruit_BME280_I2C(i2c, address=decAddress)
+	#bme280 = adafruit_bme280.Adafruit_BME280_I2C(i2c, address = decAddress)
 except ValueError as e:
 	print("Sensor BME280 failed!", flush=True)
 	print(e)

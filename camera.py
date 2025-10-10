@@ -68,8 +68,14 @@ class camera:
 		if filename=="default":
 			filename = os.path.join(self.outputpath, "%s_%s.jpg"%(self.hostname, timeString))
 		self.status = "exposing"
+		self.config.load()	
+		# deal with new os using rpicam, rather than libcamera
+		try:
+			prefix = self.config.camera['util-prefix']
+		except:
+			prefix = "libcamera-still"
 		print("Taking exposure using libcamera-still...")
-		cameraCommand = [ "libcamera-still", "-o" , "%s"%filename ] 
+		cameraCommand = [ "%s-still"%prefix, "-o" , "%s"%filename ] 
 		self.savedFilename = filename
 		
 		information("sunMoon: " + json.dumps(sunMoon))
@@ -77,7 +83,6 @@ class camera:
 		if sunMoon['night']:
 			# picam-still -o long_exposure.jpg --shutter 100000000 --gain 1 --awbgains 1,1 --immediate
 			self.mode = "night"
-			self.config.load()
 			texp = self.config.camera['suggestedTexp']
 			information("This is a night exposure, suggested exposure time: %s seconds"%texp)
 			gain = 4.0

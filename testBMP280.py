@@ -18,7 +18,7 @@ decAddress = int(address, 16)
 try:
 	bmp280 = adafruit_bmp280.Adafruit_BMP280_I2C(i2c, address = decAddress)
 except ValueError as e:
-	print("Sensor BME280 failed!", flush=True)
+	print("Sensor BMP280 failed!", flush=True)
 	print(e)
 	sys.exit()	
 
