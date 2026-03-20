@@ -40,7 +40,7 @@ if __name__ == "__main__":
 	localMode = args.local
 	configFile = open(args.config, 'rt')
 	config = json.loads(configFile.read())
-	print(config)
+	# print(config)
 	baseURL = config['diagnosticServer']
 	if localMode: baseURL = config['localURL']
 
@@ -54,7 +54,7 @@ if __name__ == "__main__":
 		sys.stderr = logFile
     
 	# Get date-time
-	now = datetime.datetime.utcnow()
+	now = datetime.datetime.now(datetime.UTC)
 	print(now)
 	diagnostics['datetimeutc'] = str(now)
 	
@@ -67,6 +67,15 @@ if __name__ == "__main__":
 	s.connect(("8.8.8.8", 80))
 	ipAddress = s.getsockname()[0]
 	diagnostics['localip'] = ipAddress
+
+
+	# get the remote IP address
+	try:
+		response = requests.get("http://rashley.eu/ip", timeout=10)
+		jsondata = response.json()
+		diagnostics['publicIP'] = jsondata['publicIP']
+	except:
+		diagnostics['publicIP'] = "unknown"
 
 	# Get WIFI SSID
 	try: 
@@ -105,7 +114,7 @@ if __name__ == "__main__":
 		OSversion = f.readline().strip()
 	diagnostics['osversion'] = OSversion
 
-	# Get GPS location from gps log file
+	"""# Get GPS location from gps log file
 	try:
 		logFile = open(config['GPSlog'], 'rt')
 		for line in logFile:
@@ -113,7 +122,8 @@ if __name__ == "__main__":
 		diagnostics['GPS'] = lastLine.strip()
 	except Exception as e:
 		print("No GPS log file.")
-	
+	"""
+
 	print(json.dumps(diagnostics, indent=4))
 	
 	upload(diagnostics)
