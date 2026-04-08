@@ -71,25 +71,41 @@ if __name__ == "__main__":
 	for sensor in config.sensors:
 		if sensor['type']=="meteo":		
 			if sensor['sensor'] == 'bme280':
-				sensorObject = meteosensors.sensor_bme280(config = sensor)
-				meteoSensors.append(sensorObject)
-				information("Added sensor '%s' of type '%s'"%(sensor['name'], sensor['sensor']))
+				try: 
+					sensorObject = meteosensors.sensor_bme280(config = sensor)
+					meteoSensors.append(sensorObject)
+					information("Added sensor '%s' of type '%s'"%(sensor['name'], sensor['sensor']))
+				except Exception as e:
+					error("Failed to add sensor '%s' of type '%s'"%(sensor['name'], sensor['sensor']))
+					error(e)
 			
 			if sensor['sensor'] == 'bmp280':
-				sensorObject = meteosensors.sensor_bmp280(config = sensor)
-				meteoSensors.append(sensorObject)
-				information("Added sensor '%s' of type '%s'"%(sensor['name'], sensor['sensor']))
+				try:
+					sensorObject = meteosensors.sensor_bmp280(config = sensor)
+					meteoSensors.append(sensorObject)
+					information("Added sensor '%s' of type '%s'"%(sensor['name'], sensor['sensor']))
+				except Exception as e:
+					error("Failed to add sensor '%s' of type '%s'"%(sensor['name'], sensor['sensor']))
+					error(e)
 			
 			if sensor['sensor'] == 'bme680':
-				sensorObject = meteosensors.sensor_bme680(config = sensor)
-				meteoSensors.append(sensorObject)
-				information("Added sensor '%s' of type '%s'"%(sensor['name'], sensor['sensor']))
+				try: 
+					sensorObject = meteosensors.sensor_bme680(config = sensor)
+					meteoSensors.append(sensorObject)
+					information("Added sensor '%s' of type '%s'"%(sensor['name'], sensor['sensor']))
+				except Exception as e:
+					error("Failed to add sensor '%s' of type '%s'"%(sensor['name'], sensor['sensor']))
+					error(e)
 
 			if sensor['sensor'] == "MLX90614":
-				sensor['installPath'] = config.installPath
-				sensorObject = meteosensors.sensor_MLX90614(config = sensor)
-				meteoSensors.append(sensorObject)
-				information("Added sensor '%s' of type '%s'"%(sensor['name'], sensor['sensor']))
+				try:
+					sensor['installPath'] = config.installPath
+					sensorObject = meteosensors.sensor_MLX90614(config = sensor)
+					meteoSensors.append(sensorObject)
+					information("Added sensor '%s' of type '%s'"%(sensor['name'], sensor['sensor']))
+				except Exception as e:
+					error("Failed to add sensor '%s' of type '%s'"%(sensor['name'], sensor['sensor']))
+					error(e)
 
 		if sensor['type']=="CPU":
 			cpuSensor = meteosensors.cpuSensor(config = sensor)
